@@ -706,6 +706,35 @@
             const averageHoursPerEmployee = totalEmployees > 0 ? totalHours / totalEmployees : 0;
             const overallAverageFTE = employees.length > 0 ? 
                 employees.reduce((sum, emp) => sum + emp.averageDailyFTE, 0) / employees.length : 0;
+
+            // Prepare weekly and monthly summary statistics for each employee.  These
+            // summaries are later rendered into tables to provide more insight into
+            // hours worked and FTE across the week and month.  Without these
+            // calculations the "Weekly" and "Monthly" sections were empty.
+            const weeklySummary = employees.map(emp => {
+                const totalWeeklyHours = emp.weeklyHours.reduce((sum, h) => sum + h, 0);
+                const weeks = emp.weeklyHours.length;
+                const avgWeeklyHours = weeks > 0 ? totalWeeklyHours / weeks : 0;
+                return {
+                    name: emp.name,
+                    totalWeeklyHours,
+                    weeks,
+                    avgWeeklyHours,
+                    averageWeeklyFTE: emp.averageWeeklyFTE
+                };
+            });
+            const monthlySummary = employees.map(emp => {
+                const totalMonthlyHours = emp.monthlyHours.reduce((sum, h) => sum + h, 0);
+                const months = emp.monthlyHours.length;
+                const avgMonthlyHours = months > 0 ? totalMonthlyHours / months : 0;
+                return {
+                    name: emp.name,
+                    totalMonthlyHours,
+                    months,
+                    avgMonthlyHours,
+                    averageMonthlyFTE: emp.averageMonthlyFTE
+                };
+            });
             
             let html = `
                 <div class="report-cards">
@@ -822,13 +851,76 @@
             html += `
                     </tbody>
                 </table>
+            `;
 
+            // Build the weekly summary section.  It shows per‑employee totals,
+            // counts and averages so that users can gauge effort each week.
+            html += `
                 <h3>📅 Weekly Summary</h3>
-                <p><strong>Note:</strong> Weekly FTE is calculated based on 40-hour standard work week.</p>
-                
+                <p><strong>Note:</strong> Weekly FTE is calculated based on a 40‑hour standard work week.</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Total Weekly Hours</th>
+                            <th>Weeks</th>
+                            <th>Avg Weekly Hours</th>
+                            <th>Avg Weekly FTE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            weeklySummary.forEach(row => {
+                html += `
+                        <tr>
+                            <td>${row.name}</td>
+                            <td>${row.totalWeeklyHours.toFixed(2)}</td>
+                            <td>${row.weeks}</td>
+                            <td>${row.avgWeeklyHours.toFixed(2)}</td>
+                            <td>${row.averageWeeklyFTE.toFixed(3)}</td>
+                        </tr>
+                `;
+            });
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            // Build the monthly summary section.  It mirrors the weekly section
+            // but aggregates by month and uses a 160‑hour standard month.
+            html += `
                 <h3>📅 Monthly Summary</h3>
-                <p><strong>Note:</strong> Monthly FTE is calculated based on 160-hour standard work month (20 working days × 8 hours).</p>
-                
+                <p><strong>Note:</strong> Monthly FTE is calculated based on a 160‑hour standard work month (20 working days × 8 hours).</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Total Monthly Hours</th>
+                            <th>Months</th>
+                            <th>Avg Monthly Hours</th>
+                            <th>Avg Monthly FTE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            monthlySummary.forEach(row => {
+                html += `
+                        <tr>
+                            <td>${row.name}</td>
+                            <td>${row.totalMonthlyHours.toFixed(2)}</td>
+                            <td>${row.months}</td>
+                            <td>${row.avgMonthlyHours.toFixed(2)}</td>
+                            <td>${row.averageMonthlyFTE.toFixed(3)}</td>
+                        </tr>
+                `;
+            });
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            // Calculation details remain unchanged but are appended after the summaries
+            html += `
                 <h3>🔍 Calculation Details</h3>
                 <ul style="margin: 15px 0; padding-left: 20px;">
                     <li><strong>Daily FTE:</strong> Daily Hours ÷ 8 hours</li>
