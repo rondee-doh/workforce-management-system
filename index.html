@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workforce Management & FTE Calculator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .form-section {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .form-section h2 {
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .time-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 12px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        .data-table th {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: #374151;
+            font-size: 11px;
+        }
+
+        .data-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .reports-section {
+            grid-column: 1 / -1;
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            margin-top: 20px;
+        }
+
+        .report-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .report-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #4f46e5;
+            transition: transform 0.3s ease;
+        }
+
+        .report-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .report-card h3 {
+            color: #1e293b;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .report-card .value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #4f46e5;
+        }
+
+        .report-card .label {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: #dc2626;
+        }
+
+        .entries-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .time-group {
+                grid-template-columns: 1fr;
+            }
+
+            .data-table {
+                font-size: 10px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Workforce Management System</h1>
+            <p>Comprehensive FTE Calculator & Time Tracking Solution</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Data Entry Form -->
+            <div class="form-section">
+                <h2>📝 Employee Time Entry</h2>
+                <div id="alertContainer"></div>
+                
+                <div class="form-group">
+                    <label for="logDate">Log Date:</label>
+                    <input type="date" id="logDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="employeeName">Employee Name:</label>
+                    <select id="employeeName" required>
+                        <option value="">Select Employee</option>
+                        <option value="DR. ARLENE S. SY">DR. ARLENE S. SY</option>
+                        <option value="MR. ALLEN JAY P. GONDA">MR. ALLEN JAY P. GONDA</option>
+                        <option value="MR. NEIL IRVING QUERUBIN">MR. NEIL IRVING QUERUBIN</option>
+                        <option value="MS. MICHELLE M. YGAR">MS. MICHELLE M. YGAR</option>
+                        <option value="MR. REY V. ROLLON">MR. REY V. ROLLON</option>
+                        <option value="MR. NEREO VILLAFLORES">MR. NEREO VILLAFLORES</option>
+                        <option value="MS. NADIA CZARINA MAE CORTUNA">MS. NADIA CZARINA MAE CORTUNA</option>
+                        <option value="MS. GENECA JANEL GENETA-HALUM">MS. GENECA JANEL GENETA-HALUM</option>
+                        <option value="MS. EUNICE TADALAN-QUIBOLOY">MS. EUNICE TADALAN-QUIBOLOY</option>
+                        <option value="MS. JULIE CHRISTINE BANDIOLA">MS. JULIE CHRISTINE BANDIOLA</option>
+                        <option value="MS. MARIA LANY ROSE BRIONES">MS. MARIA LANY ROSE BRIONES</option>
+                        <option value="MS. MARY AUBREY FINEZA">MS. MARY AUBREY FINEZA</option>
+                        <option value="MR. RAFH L. MARASIGAN">MR. RAFH L. MARASIGAN</option>
+                        <option value="MR. LAWRENCE EDWARD MANEJA">MR. LAWRENCE EDWARD MANEJA</option>
+                        <option value="MS. AYCA P. HERNANDEZ">MS. AYCA P. HERNANDEZ</option>
+                        <option value="MS.DANA TWAIN SOLANO">MS.DANA TWAIN SOLANO</option>
+                        <option value="MR. KEVIN JOHN DANDOY">MR. KEVIN JOHN DANDOY</option>
+                        <option value="MR. ROMMEL L. CALANO">MR. ROMMEL L. CALANO</option>
+                        <option value="MR. ERMIL D. SADOL">MR. ERMIL D. SADOL</option>
+                        <option value="MR. MARK RAVEN JAY G. DULAY">MR. MARK RAVEN JAY G. DULAY</option>
+                        <option value="MS. LYNNE DENISE TIQUIS">MS. LYNNE DENISE TIQUIS</option>
+                        <option value="ENGR. MARK JUDE GUERRERO">ENGR. MARK JUDE GUERRERO</option>
+                        <option value="MR. JUN JUN ESGUERRA III">MR. JUN JUN ESGUERRA III</option>
+                        <option value="MS. JEDY ARA TURGA">MS. JEDY ARA TURGA</option>
+                        <option value="MS. MARY SHIELL PANGANIBAN">MS. MARY SHIELL PANGANIBAN</option>
+                        <option value="MS. CAROL CALLO">MS. CAROL CALLO</option>
+                        <option value="MS. ARMI A. CABITAC">MS. ARMI A. CABITAC</option>
+                        <option value="MR. ALDRIN VALBUENA">MR. ALDRIN VALBUENA</option>
+                        <option value="MS. MARIA MAGNA HERNANDEZ-TRIA">MS. MARIA MAGNA HERNANDEZ-TRIA</option>
+                        <option value="MR. JAN LESTER O. EDJAN">MR. JAN LESTER O. EDJAN</option>
+                        <option value="MR. ARDENNES ESAR">MR. ARDENNES ESAR</option>
+                        <option value="MR. JAY REYES">MR. JAY REYES</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskDescription">Task Description:</label>
+                    <textarea id="taskDescription" rows="3" placeholder="Describe the task performed..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskGroup">Task Group:</label>
+                    <select id="taskGroup" required>
+                        <option value="">Select Task Group</option>
+                        <option value="Health Systems Development and Policy Assistance">Health Systems Development and Policy Assistance</option>
+                        <option value="Service Delivery Supervision (BHS, RHU, Hospitals, Lying-in, Mobile)">Service Delivery Supervision (BHS, RHU, Hospitals, Lying-in, Mobile)</option>
+                        <option value="Disease Surveillance and Outbreak Response">Disease Surveillance and Outbreak Response</option>
+                        <option value="Supply Chain and Logistics Coordination">Supply Chain and Logistics Coordination</option>
+                        <option value="HRH Deployment Oversight and TA">HRH Deployment Oversight and TA</option>
+                        <option value="Monitoring and Evaluation / Data Validation">Monitoring and Evaluation / Data Validation</option>
+                        <option value="Financial and Budgetary TA to LGUs">Financial and Budgetary TA to LGUs</option>
+                        <option value="Intersectoral Engagements / Stakeholder Meetings">Intersectoral Engagements / Stakeholder Meetings</option>
+                        <option value="Field Visits (Technical Supervision)">Field Visits (Technical Supervision)</option>
+                        <option value="Administrative and Internal Coordination">Administrative and Internal Coordination</option>
+                        <option value="Report Preparation / Documentation">Report Preparation / Documentation</option>
+                        <option value="Trainings, Workshops, and Capacity Building (as Resource Person or Facilitator)">Trainings, Workshops, and Capacity Building (as Resource Person or Facilitator)</option>
+                        <option value="Others (specify)">Others (specify)</option>
+                    </select>
+                </div>
+
+                <div class="time-group">
+                    <div class="form-group">
+                        <label for="startTime">Start Time:</label>
+                        <input type="time" id="startTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="endTime">End Time:</label>
+                        <input type="time" id="endTime" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="leaveStatus">Leave Status:</label>
+                    <select id="leaveStatus">
+                        <option value="none">None</option>
+                        <option value="vacation">Vacation</option>
+                        <option value="sick">Sick Leave</option>
+                        <option value="maternity">Maternity Leave</option>
+                        <option value="paternity">Paternity Leave</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="overtimeStatus">Overtime Status:</label>
+                    <select id="overtimeStatus">
+                        <option value="none">None</option>
+                        <option value="authorized">Authorized</option>
+                    </select>
+                </div>
+
+                <button type="button" class="btn" onclick="addEntry()">Add Entry</button>
+                <button type="button" class="btn btn-secondary" onclick="generateReport()">Generate Report</button>
+                <button type="button" class="btn" onclick="exportToExcel()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">📊 Export to Excel</button>
+                <button type="button" class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+            </div>
+
+            <!-- Current Entries Display -->
+            <div class="form-section">
+                <h2>📊 Current Entries (<span id="entryCount">0</span>)</h2>
+                <div class="entries-container">
+                    <div id="entriesDisplay">
+                        <p>No entries yet. Add your first time entry to get started!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div class="reports-section">
+            <h2>📈 Workforce Analytics & FTE Reports</h2>
+            <div id="reportsDisplay">
+                <p>Generate a report to view detailed analytics and FTE calculations.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Data storage
+        let timeEntries = [];
+        let nextId = 1;
+
+        // Initialize with today's date
+        document.getElementById('logDate').valueAsDate = new Date();
+
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        function validateForm() {
+            const logDate = document.getElementById('logDate').value;
+            const employeeName = document.getElementById('employeeName').value;
+            const taskGroup = document.getElementById('taskGroup').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (!logDate) {
+                showAlert('Please select a log date.', 'error');
+                return false;
+            }
+            if (!employeeName) {
+                showAlert('Please select an employee.', 'error');
+                return false;
+            }
+            if (!taskGroup) {
+                showAlert('Please select a task group.', 'error');
+                return false;
+            }
+            if (!startTime) {
+                showAlert('Please enter start time.', 'error');
+                return false;
+            }
+            if (!endTime) {
+                showAlert('Please enter end time.', 'error');
+                return false;
+            }
+
+            return true;
+        }
+
+        function addEntry() {
+            if (!validateForm()) {
+                return;
+            }
+
+            const entry = {
+                id: nextId++,
+                logDate: document.getElementById('logDate').value,
+                employeeName: document.getElementById('employeeName').value,
+                taskDescription: document.getElementById('taskDescription').value || 'No description provided',
+                taskGroup: document.getElementById('taskGroup').value,
+                startTime: document.getElementById('startTime').value,
+                endTime: document.getElementById('endTime').value,
+                leaveStatus: document.getElementById('leaveStatus').value,
+                overtimeStatus: document.getElementById('overtimeStatus').value
+            };
+
+            // Calculate hours worked
+            entry.hoursWorked = calculateHoursWorked(entry.startTime, entry.endTime, entry.leaveStatus);
+            entry.dailyFTE = calculateDailyFTE(entry.hoursWorked);
+
+            timeEntries.push(entry);
+            displayEntries();
+            clearForm();
+            showAlert('Entry added successfully!');
+        }
+
+        function calculateHoursWorked(startTime, endTime, leaveStatus) {
+            if (leaveStatus !== 'none') {
+                return 0; // No hours if on leave
+            }
+
+            const [startHour, startMinute] = startTime.split(':').map(Number);
+            const [endHour, endMinute] = endTime.split(':').map(Number);
+            
+            let startTotalMinutes = startHour * 60 + startMinute;
+            let endTotalMinutes = endHour * 60 + endMinute;
+            
+            // Handle overnight shifts
+            if (endTotalMinutes < startTotalMinutes) {
+                endTotalMinutes += 24 * 60; // Add 24 hours
+            }
+            
+            const diffMinutes = endTotalMinutes - startTotalMinutes;
+            return Math.max(0, diffMinutes / 60); // Convert to hours
+        }
+
+        function calculateDailyFTE(hoursWorked) {
+            return hoursWorked / 8; // Standard 8-hour workday
+        }
+
+        function clearForm() {
+            document.getElementById('taskDescription').value = '';
+            document.getElementById('startTime').value = '';
+            document.getElementById('endTime').value = '';
+            document.getElementById('leaveStatus').value = 'none';
+            document.getElementById('overtimeStatus').value = 'none';
+        }
+
+        function displayEntries() {
+            const display = document.getElementById('entriesDisplay');
+            const countElement = document.getElementById('entryCount');
+            
+            countElement.textContent = timeEntries.length;
+            
+            if (timeEntries.length === 0) {
+                display.innerHTML = '<p>No entries yet. Add your first time entry to get started!</p>';
+                return;
+            }
+
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Employee</th>
+                            <th>Task Group</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Hours</th>
+                            <th>FTE</th>
+                            <th>Leave</th>
+                            <th>OT</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            timeEntries.forEach(entry => {
+                const shortEmployee = entry.employeeName.split(' ').slice(-2).join(' '); // Last 2 words
+                const shortTaskGroup = entry.taskGroup.length > 25 ? entry.taskGroup.substring(0, 25) + '...' : entry.taskGroup;
+                
+                html += `
+                    <tr>
+                        <td>${entry.logDate}</td>
+                        <td title="${entry.employeeName}">${shortEmployee}</td>
+                        <td title="${entry.taskGroup}">${shortTaskGroup}</td>
+                        <td>${entry.startTime}</td>
+                        <td>${entry.endTime}</td>
+                        <td>${entry.hoursWorked.toFixed(2)}</td>
+                        <td>${entry.dailyFTE.toFixed(3)}</td>
+                        <td>${entry.leaveStatus}</td>
+                        <td>${entry.overtimeStatus}</td>
+                        <td><button class="delete-btn" onclick="deleteEntry(${entry.id})">Del</button></td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            display.innerHTML = html;
+        }
+
+        function deleteEntry(id) {
+            if (confirm('Are you sure you want to delete this entry?')) {
+                timeEntries = timeEntries.filter(entry => entry.id !== id);
+                displayEntries();
+                showAlert('Entry deleted successfully!');
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                timeEntries = [];
+                nextId = 1;
+                displayEntries();
+                document.getElementById('reportsDisplay').innerHTML = '<p>Generate a report to view detailed analytics and FTE calculations.</p>';
+                showAlert('All data cleared successfully!');
+            }
+        }
+
+        function generateReport() {
+            if (timeEntries.length === 0) {
+                showAlert('Please add some time entries before generating a report.', 'error');
+                return;
+            }
+
+            const reportData = calculateReportData();
+            displayReport(reportData);
+            showAlert('Report generated successfully!');
+        }
+
+        function calculateReportData() {
+            const employeeData = {};
+            
+            // Group data by employee
+            timeEntries.forEach(entry => {
+                if (!employeeData[entry.employeeName]) {
+                    employeeData[entry.employeeName] = {
+                        name: entry.employeeName,
+                        entries: [],
+                        totalHours: 0,
+                        workingDays: new Set(),
+                        taskGroups: new Set(),
+                        leaveHours: 0,
+                        overtimeHours: 0
+                    };
+                }
+                
+                const employee = employeeData[entry.employeeName];
+                employee.entries.push(entry);
+                employee.totalHours += entry.hoursWorked;
+                employee.taskGroups.add(entry.taskGroup);
+                
+                if (entry.hoursWorked > 0) {
+                    employee.workingDays.add(entry.logDate);
+                }
+                
+                if (entry.leaveStatus !== 'none') {
+                    employee.leaveHours += 8; // Assume full day for leave
+                }
+                
+                if (entry.overtimeStatus === 'authorized' && entry.hoursWorked > 8) {
+                    employee.overtimeHours += (entry.hoursWorked - 8);
+                }
+            });
+
+            // Calculate weekly and monthly data
+            Object.keys(employeeData).forEach(employeeName => {
+                const employee = employeeData[employeeName];
+                employee.workingDaysCount = employee.workingDays.size;
+                employee.taskGroupsCount = employee.taskGroups.size;
+                
+                // Group entries by week and month
+                const weeklyData = {};
+                const monthlyData = {};
+                
+                employee.entries.forEach(entry => {
+                    const date = new Date(entry.logDate);
+                    const weekKey = getWeekKey(date);
+                    const monthKey = getMonthKey(date);
+                    
+                    if (!weeklyData[weekKey]) weeklyData[weekKey] = 0;
+                    if (!monthlyData[monthKey]) monthlyData[monthKey] = 0;
+                    
+                    weeklyData[weekKey] += entry.hoursWorked;
+                    monthlyData[monthKey] += entry.hoursWorked;
+                });
+                
+                // Calculate FTE metrics
+                employee.averageDailyHours = employee.workingDaysCount > 0 ? employee.totalHours / employee.workingDaysCount : 0;
+                employee.averageDailyFTE = employee.averageDailyHours / 8;
+                
+                // Weekly FTE calculations
+                employee.weeklyHours = Object.values(weeklyData);
+                employee.weeklyFTEs = employee.weeklyHours.map(hours => hours / 40);
+                employee.averageWeeklyFTE = employee.weeklyFTEs.length > 0 ? 
+                    employee.weeklyFTEs.reduce((sum, fte) => sum + fte, 0) / employee.weeklyFTEs.length : 0;
+                
+                // Monthly FTE calculations
+                employee.monthlyHours = Object.values(monthlyData);
+                employee.monthlyFTEs = employee.monthlyHours.map(hours => hours / 160); // 20 working days * 8 hours
+                employee.averageMonthlyFTE = employee.monthlyFTEs.length > 0 ? 
+                    employee.monthlyFTEs.reduce((sum, fte) => sum + fte, 0) / employee.monthlyFTEs.length : 0;
+            });
+
+            return employeeData;
+        }
+
+        function getWeekKey(date) {
+            const year = date.getFullYear();
+            const week = getWeekNumber(date);
+            return `${year}-W${week.toString().padStart(2, '0')}`;
+        }
+
+        function getMonthKey(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            return `${year}-${month.toString().padStart(2, '0')}`;
+        }
+
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function displayReport(reportData) {
+            const display = document.getElementById('reportsDisplay');
+            
+            // Calculate summary statistics
+            const employees = Object.values(reportData);
+            const totalEmployees = employees.length;
+            const totalHours = employees.reduce((sum, emp) => sum + emp.totalHours, 0);
+            const totalWorkingDays = employees.reduce((sum, emp) => sum + emp.workingDaysCount, 0);
+            const averageHoursPerEmployee = totalEmployees > 0 ? totalHours / totalEmployees : 0;
+            const overallAverageFTE = employees.length > 0 ? 
+                employees.reduce((sum, emp) => sum + emp.averageDailyFTE, 0) / employees.length : 0;
+            
+            let html = `
+                <div class="report-cards">
+                    <div class="report-card">
+                        <h3>Total Employees</h3>
+                        <div class="value">${totalEmployees}</div>
+                        <div class="label">Active employees tracked</div>
+                    </div>
+                    <div class="report-card">
+                        <h3>Total Hours</h3>
+                        <div class="value">${totalHours.toFixed(1)}</div>
+                        <div class="label">Combined work hours</div>
+                    </div>
+                    <div class="report-card">
+                        <h3>Total Working Days</h3>
+                        <div class="value">${totalWorkingDays}</div>
+                        <div class="label">Days with logged hours</div>
+                    </div>
+                    <div class="report-card">
+                        <h3>Avg Hours/Employee</h3>
+                        <div class="value">${averageHoursPerEmployee.toFixed(1)}</div>
+                        <div class="label">Per employee average</div>
+                    </div>
+                    <div class="report-card">
+                        <h3>Overall Avg FTE</h3>
+                        <div class="value">${overallAverageFTE.toFixed(3)}</div>
+                        <div class="label">Daily FTE average</div>
+                    </div>
+                    <div class="report-card">
+                        <h3>Total Entries</h3>
+                        <div class="value">${timeEntries.length}</div>
+                        <div class="label">Time log entries</div>
+                    </div>
+                </div>
+
+                <h3>📋 Detailed Employee FTE Report</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Employee Name</th>
+                            <th>Total Hours</th>
+                            <th>Working Days</th>
+                            <th>Avg Daily Hours</th>
+                            <th>Daily FTE</th>
+                            <th>Weekly FTE</th>
+                            <th>Monthly FTE</th>
+                            <th>Task Groups</th>
+                            <th>Overtime Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            employees.forEach(employee => {
+                html += `
+                    <tr>
+                        <td>${employee.name}</td>
+                        <td>${employee.totalHours.toFixed(2)}</td>
+                        <td>${employee.workingDaysCount}</td>
+                        <td>${employee.averageDailyHours.toFixed(2)}</td>
+                        <td>${employee.averageDailyFTE.toFixed(3)}</td>
+                        <td>${employee.averageWeeklyFTE.toFixed(3)}</td>
+                        <td>${employee.averageMonthlyFTE.toFixed(3)}</td>
+                        <td>${employee.taskGroupsCount}</td>
+                        <td>${employee.overtimeHours.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+
+                <h3>📊 Task Group Distribution</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Task Group</th>
+                            <th>Total Hours</th>
+                            <th>Percentage</th>
+                            <th>Entries</th>
+                            <th>Avg Hours/Entry</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            // Calculate task group distribution
+            const taskGroups = {};
+            timeEntries.forEach(entry => {
+                if (!taskGroups[entry.taskGroup]) {
+                    taskGroups[entry.taskGroup] = { hours: 0, count: 0 };
+                }
+                taskGroups[entry.taskGroup].hours += entry.hoursWorked;
+                taskGroups[entry.taskGroup].count += 1;
+            });
+
+            Object.entries(taskGroups)
+                .sort(([,a], [,b]) => b.hours - a.hours) // Sort by hours descending
+                .forEach(([taskGroup, data]) => {
+                    const percentage = (data.hours / totalHours * 100).toFixed(1);
+                    const avgHours = data.count > 0 ? (data.hours / data.count).toFixed(2) : '0.00';
+                    html += `
+                        <tr>
+                            <td>${taskGroup}</td>
+                            <td>${data.hours.toFixed(2)}</td>
+                            <td>${percentage}%</td>
+                            <td>${data.count}</td>
+                            <td>${avgHours}</td>
+                        </tr>
+                    `;
+                });
+
+            html += `
+                    </tbody>
+                </table>
+
+                <h3>📅 Weekly Summary</h3>
+                <p><strong>Note:</strong> Weekly FTE is calculated based on 40-hour standard work week.</p>
+                
+                <h3>📅 Monthly Summary</h3>
+                <p><strong>Note:</strong> Monthly FTE is calculated based on 160-hour standard work month (20 working days × 8 hours).</p>
+                
+                <h3>🔍 Calculation Details</h3>
+                <ul style="margin: 15px 0; padding-left: 20px;">
+                    <li><strong>Daily FTE:</strong> Daily Hours ÷ 8 hours</li>
+                    <li><strong>Weekly FTE:</strong> Weekly Hours ÷ 40 hours</li>
+                    <li><strong>Monthly FTE:</strong> Monthly Hours ÷ 160 hours</li>
+                    <li><strong>Leave Days:</strong> Count as 0 hours worked</li>
+                    <li><strong>Overtime:</strong> Hours beyond 8 hours per day (when authorized)</li>
+                </ul>
+            `;
+            
+            display.innerHTML = html;
+        }
+
+        // Initialize display
+        displayEntries();
+
+        function exportToExcel() {
+            if (timeEntries.length === 0) {
+                showAlert('No data to export. Please add some entries first.', 'error');
+                return;
+            }
+
+            try {
+                // Create a new workbook
+                const workbook = XLSX.utils.book_new();
+
+                // Sheet 1: Raw Time Entries
+                const rawData = timeEntries.map(entry => ({
+                    'Log Date': entry.logDate,
+                    'Employee Name': entry.employeeName,
+                    'Task Description': entry.taskDescription,
+                    'Task Group': entry.taskGroup,
+                    'Start Time': entry.startTime,
+                    'End Time': entry.endTime,
+                    'Hours Worked': parseFloat(entry.hoursWorked.toFixed(2)),
+                    'Daily FTE': parseFloat(entry.dailyFTE.toFixed(3)),
+                    'Leave Status': entry.leaveStatus,
+                    'Overtime Status': entry.overtimeStatus
+                }));
+
+                const rawDataSheet = XLSX.utils.json_to_sheet(rawData);
+                
+                // Auto-width columns for raw data
+                const rawDataCols = [
+                    { wch: 12 }, // Log Date
+                    { wch: 25 }, // Employee Name
+                    { wch: 40 }, // Task Description
+                    { wch: 35 }, // Task Group
+                    { wch: 10 }, // Start Time
+                    { wch: 10 }, // End Time
+                    { wch: 12 }, // Hours Worked
+                    { wch: 10 }, // Daily FTE
+                    { wch: 12 }, // Leave Status
+                    { wch: 15 }  // Overtime Status
+                ];
+                rawDataSheet['!cols'] = rawDataCols;
+
+                XLSX.utils.book_append_sheet(workbook, rawDataSheet, 'Time Entries');
+
+                // Sheet 2: Employee Summary (if we have report data)
+                if (timeEntries.length > 0) {
+                    const reportData = calculateReportData();
+                    const employees = Object.values(reportData);
+                    
+                    const summaryData = employees.map(employee => ({
+                        'Employee Name': employee.name,
+                        'Total Hours': parseFloat(employee.totalHours.toFixed(2)),
+                        'Working Days': employee.workingDaysCount,
+                        'Average Daily Hours': parseFloat(employee.averageDailyHours.toFixed(2)),
+                        'Daily FTE': parseFloat(employee.averageDailyFTE.toFixed(3)),
+                        'Weekly FTE': parseFloat(employee.averageWeeklyFTE.toFixed(3)),
+                        'Monthly FTE': parseFloat(employee.averageMonthlyFTE.toFixed(3)),
+                        'Task Groups Count': employee.taskGroupsCount,
+                        'Overtime Hours': parseFloat(employee.overtimeHours.toFixed(2)),
+                        'Leave Hours': parseFloat(employee.leaveHours.toFixed(2))
+                    }));
+
+                    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+                    
+                    // Auto-width columns for summary
+                    const summaryCols = [
+                        { wch: 25 }, // Employee Name
+                        { wch: 12 }, // Total Hours
+                        { wch: 12 }, // Working Days
+                        { wch: 15 }, // Average Daily Hours
+                        { wch: 10 }, // Daily FTE
+                        { wch: 12 }, // Weekly FTE
+                        { wch: 12 }, // Monthly FTE
+                        { wch: 15 }, // Task Groups Count
+                        { wch: 12 }, // Overtime Hours
+                        { wch: 12 }  // Leave Hours
+                    ];
+                    summarySheet['!cols'] = summaryCols;
+
+                    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Employee Summary');
+
+                    // Sheet 3: Task Group Analysis
+                    const taskGroups = {};
+                    timeEntries.forEach(entry => {
+                        if (!taskGroups[entry.taskGroup]) {
+                            taskGroups[entry.taskGroup] = { hours: 0, count: 0 };
+                        }
+                        taskGroups[entry.taskGroup].hours += entry.hoursWorked;
+                        taskGroups[entry.taskGroup].count += 1;
+                    });
+
+                    const totalHours = employees.reduce((sum, emp) => sum + emp.totalHours, 0);
+                    const taskGroupData = Object.entries(taskGroups)
+                        .sort(([,a], [,b]) => b.hours - a.hours)
+                        .map(([taskGroup, data]) => ({
+                            'Task Group': taskGroup,
+                            'Total Hours': parseFloat(data.hours.toFixed(2)),
+                            'Percentage': parseFloat((data.hours / totalHours * 100).toFixed(1)),
+                            'Entry Count': data.count,
+                            'Average Hours per Entry': parseFloat((data.hours / data.count).toFixed(2))
+                        }));
+
+                    const taskGroupSheet = XLSX.utils.json_to_sheet(taskGroupData);
+                    
+                    // Auto-width columns for task groups
+                    const taskGroupCols = [
+                        { wch: 45 }, // Task Group
+                        { wch: 12 }, // Total Hours
+                        { wch: 12 }, // Percentage
+                        { wch: 12 }, // Entry Count
+                        { wch: 20 }  // Average Hours per Entry
+                    ];
+                    taskGroupSheet['!cols'] = taskGroupCols;
+
+                    XLSX.utils.book_append_sheet(workbook, taskGroupSheet, 'Task Group Analysis');
+
+                    // Sheet 4: Weekly Breakdown
+                    const weeklyBreakdown = [];
+                    employees.forEach(employee => {
+                        employee.entries.forEach(entry => {
+                            const date = new Date(entry.logDate);
+                            const weekKey = getWeekKey(date);
+                            weeklyBreakdown.push({
+                                'Week': weekKey,
+                                'Employee Name': employee.name,
+                                'Date': entry.logDate,
+                                'Hours': parseFloat(entry.hoursWorked.toFixed(2)),
+                                'Daily FTE': parseFloat(entry.dailyFTE.toFixed(3)),
+                                'Task Group': entry.taskGroup
+                            });
+                        });
+                    });
+
+                    // Sort by week and employee
+                    weeklyBreakdown.sort((a, b) => {
+                        if (a.Week !== b.Week) return a.Week.localeCompare(b.Week);
+                        return a['Employee Name'].localeCompare(b['Employee Name']);
+                    });
+
+                    const weeklySheet = XLSX.utils.json_to_sheet(weeklyBreakdown);
+                    
+                    // Auto-width columns for weekly breakdown
+                    const weeklyCols = [
+                        { wch: 12 }, // Week
+                        { wch: 25 }, // Employee Name
+                        { wch: 12 }, // Date
+                        { wch: 10 }, // Hours
+                        { wch: 10 }, // Daily FTE
+                        { wch: 35 }  // Task Group
+                    ];
+                    weeklySheet['!cols'] = weeklyCols;
+
+                    XLSX.utils.book_append_sheet(workbook, weeklySheet, 'Weekly Breakdown');
+
+                    // Sheet 5: Monthly Breakdown
+                    const monthlyBreakdown = [];
+                    employees.forEach(employee => {
+                        const monthlyData = {};
+                        employee.entries.forEach(entry => {
+                            const date = new Date(entry.logDate);
+                            const monthKey = getMonthKey(date);
+                            if (!monthlyData[monthKey]) {
+                                monthlyData[monthKey] = {
+                                    hours: 0,
+                                    days: new Set(),
+                                    taskGroups: new Set()
+                                };
+                            }
+                            monthlyData[monthKey].hours += entry.hoursWorked;
+                            monthlyData[monthKey].days.add(entry.logDate);
+                            monthlyData[monthKey].taskGroups.add(entry.taskGroup);
+                        });
+
+                        Object.entries(monthlyData).forEach(([month, data]) => {
+                            monthlyBreakdown.push({
+                                'Month': month,
+                                'Employee Name': employee.name,
+                                'Total Hours': parseFloat(data.hours.toFixed(2)),
+                                'Working Days': data.days.size,
+                                'Monthly FTE': parseFloat((data.hours / 160).toFixed(3)),
+                                'Task Groups': data.taskGroups.size,
+                                'Average Daily Hours': parseFloat((data.hours / data.days.size).toFixed(2))
+                            });
+                        });
+                    });
+
+                    // Sort by month and employee
+                    monthlyBreakdown.sort((a, b) => {
+                        if (a.Month !== b.Month) return a.Month.localeCompare(b.Month);
+                        return a['Employee Name'].localeCompare(b['Employee Name']);
+                    });
+
+                    const monthlySheet = XLSX.utils.json_to_sheet(monthlyBreakdown);
+                    
+                    // Auto-width columns for monthly breakdown
+                    const monthlyCols = [
+                        { wch: 10 }, // Month
+                        { wch: 25 }, // Employee Name
+                        { wch: 12 }, // Total Hours
+                        { wch: 12 }, // Working Days
+                        { wch: 12 }, // Monthly FTE
+                        { wch: 12 }, // Task Groups
+                        { wch: 18 }  // Average Daily Hours
+                    ];
+                    monthlySheet['!cols'] = monthlyCols;
+
+                    XLSX.utils.book_append_sheet(workbook, monthlySheet, 'Monthly Breakdown');
+                }
+
+                // Generate filename with current date
+                const now = new Date();
+                const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+                const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS format
+                const filename = `Workforce_Management_Report_${dateStr}_${timeStr}.xlsx`;
+
+                // Write and download the file
+                XLSX.writeFile(workbook, filename);
+                
+                showAlert(`Excel file exported successfully as: ${filename}`);
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showAlert('Error exporting to Excel. Please try again.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
