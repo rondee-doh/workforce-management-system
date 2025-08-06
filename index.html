@@ -380,6 +380,8 @@
                 <button type="button" class="btn" onclick="addEntry()">Add Entry</button>
                 <button type="button" class="btn btn-secondary" onclick="generateReport()">Generate Report</button>
                 <button type="button" class="btn" onclick="exportToExcel()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">📊 Export to Excel</button>
+                <!-- New Save Data button to persist entries across sessions -->
+                <button type="button" class="btn" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);" onclick="saveData()">💾 Save Data</button>
                 <button type="button" class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
             </div>
 
@@ -583,7 +585,58 @@
                 nextId = 1;
                 displayEntries();
                 document.getElementById('reportsDisplay').innerHTML = '<p>Generate a report to view detailed analytics and FTE calculations.</p>';
+                // Remove any saved data from localStorage as well
+                localStorage.removeItem('timeEntries');
                 showAlert('All data cleared successfully!');
+            }
+        }
+
+        /**
+         * Persist the current time entries to localStorage so that they are
+         * available on future visits. The data is serialized to JSON and
+         * stored under the key "timeEntries". A confirmation alert is shown
+         * after saving. Users should click this after finalizing their inputs.
+         */
+        function saveData() {
+            try {
+                localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+                showAlert('Data saved successfully!');
+            } catch (e) {
+                console.error('Failed to save data', e);
+                showAlert('Failed to save data. See console for details.', 'error');
+            }
+        }
+
+        /**
+         * Load any previously saved time entries from localStorage. If entries
+         * exist they replace the current in-memory list and the display is
+         * refreshed. This should be invoked on page load to restore a user's
+         * session. It also updates nextId so new entries continue from the
+         * highest saved ID.
+         */
+        function loadSavedData() {
+            const saved = localStorage.getItem('timeEntries');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                        // Convert numeric values and ensure required fields exist
+                        timeEntries = parsed.map(entry => {
+                            return Object.assign({}, entry, {
+                                hoursWorked: parseFloat(entry.hoursWorked),
+                                dailyFTE: parseFloat(entry.dailyFTE)
+                            });
+                        });
+                        // Update nextId to one greater than the current max
+                        nextId = timeEntries.reduce((maxId, e) => Math.max(maxId, e.id || 0), 0) + 1;
+                        displayEntries();
+                        // If there were saved entries, automatically show the last generated report
+                        const reportData = calculateReportData();
+                        displayReport(reportData);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse saved data', e);
+                }
             }
         }
 
@@ -936,6 +989,9 @@
 
         // Initialize display
         displayEntries();
+        // Load any saved entries from previous sessions. This will overwrite
+        // the in-memory list with persisted data and refresh the display.
+        loadSavedData();
 
         function exportToExcel() {
             if (timeEntries.length === 0) {
