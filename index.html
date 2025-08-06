@@ -217,6 +217,27 @@
             font-size: 12px;
         }
 
+        /*
+         * Button used for editing existing time entries. Styled similarly to
+         * the delete button but with a distinct color to indicate a different
+         * action. A small margin is added on the right to separate it from
+         * adjacent buttons.
+         */
+        .edit-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
+        .edit-btn:hover {
+            background: #059669;
+        }
+
         .delete-btn:hover {
             background: #dc2626;
         }
@@ -562,7 +583,10 @@
                         <td>${entry.dailyFTE.toFixed(3)}</td>
                         <td>${entry.leaveStatus}</td>
                         <td>${entry.overtimeStatus}</td>
-                        <td><button class="delete-btn" onclick="deleteEntry(${entry.id})">Del</button></td>
+                        <td>
+                            <button class="edit-btn" onclick="editEntry(${entry.id})">Edit</button>
+                            <button class="delete-btn" onclick="deleteEntry(${entry.id})">Del</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -577,6 +601,37 @@
                 displayEntries();
                 showAlert('Entry deleted successfully!');
             }
+        }
+
+        /**
+         * Load an existing entry into the form for editing. This allows users
+         * to modify a previously saved entry. The entry is removed from the
+         * current list and the form fields are populated with its data. After
+         * making changes, the user should click "Add Entry" to re-save.
+         * @param {number} id - The ID of the entry to edit.
+         */
+        function editEntry(id) {
+            const index = timeEntries.findIndex(e => e.id === id);
+            if (index === -1) {
+                showAlert('Entry not found.', 'error');
+                return;
+            }
+            const entry = timeEntries[index];
+            // Populate form fields with entry data
+            document.getElementById('logDate').value = entry.logDate;
+            document.getElementById('employeeName').value = entry.employeeName;
+            // If the task description was blank, leave the field empty for editing
+            document.getElementById('taskDescription').value = (entry.taskDescription === 'No description provided') ? '' : entry.taskDescription;
+            document.getElementById('taskGroup').value = entry.taskGroup;
+            document.getElementById('startTime').value = entry.startTime;
+            document.getElementById('endTime').value = entry.endTime;
+            document.getElementById('leaveStatus').value = entry.leaveStatus;
+            document.getElementById('overtimeStatus').value = entry.overtimeStatus;
+
+            // Remove entry from list so it can be updated when re-added
+            timeEntries.splice(index, 1);
+            displayEntries();
+            showAlert('Entry loaded for editing. Update the details and click Add Entry to save.');
         }
 
         function clearAllData() {
