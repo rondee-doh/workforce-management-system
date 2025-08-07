@@ -308,6 +308,7 @@
         .custom-bar-chart {
             flex: 1 1 400px;
             min-width: 300px;
+            width: 100%;
         }
 
         .custom-bar-chart h4 {
@@ -333,8 +334,8 @@
 
         .bar {
             position: relative;
-            height: 18px;
-            background-color: rgba(99, 102, 241, 0.6);
+            height: 22px;
+            background-color: rgba(99, 102, 241, 0.8);
             border-radius: 4px;
             flex-grow: 1;
         }
@@ -1409,7 +1410,9 @@
                     const bar = document.createElement('div');
                     bar.className = 'bar';
                     bar.style.width = percentage + '%';
-                    bar.setAttribute('data-value', `${value.toFixed(unit === 'hours' ? 2 : 3)}`);
+                    // Format value to 2 decimal places for hours and 3 for FTE
+                    const formattedValue = unit === 'hours' ? value.toFixed(2) : value.toFixed(3);
+                    bar.setAttribute('data-value', `${formattedValue}`);
                     row.appendChild(bar);
                     chartDiv.appendChild(row);
                 });
@@ -1418,15 +1421,50 @@
 
             // Prepare values for charts
             const totalHoursValues = employees.map(emp => emp.totalHours);
-            const avgFTEValues = employees.map(emp => emp.averageDailyFTE);
+            const avgDailyHoursValues = employees.map(emp => emp.averageDailyHours);
+            // Compute average weekly and monthly hours for each employee
+            const avgWeeklyHoursValues = employees.map(emp => {
+                const weeks = Array.isArray(emp.weeklyHours) ? emp.weeklyHours.length : 0;
+                const total = Array.isArray(emp.weeklyHours) ? emp.weeklyHours.reduce((sum, h) => sum + h, 0) : 0;
+                return weeks > 0 ? total / weeks : 0;
+            });
+            const avgMonthlyHoursValues = employees.map(emp => {
+                const months = Array.isArray(emp.monthlyHours) ? emp.monthlyHours.length : 0;
+                const total = Array.isArray(emp.monthlyHours) ? emp.monthlyHours.reduce((sum, h) => sum + h, 0) : 0;
+                return months > 0 ? total / months : 0;
+            });
+            // FTE values
+            const avgDailyFTEValues = employees.map(emp => emp.averageDailyFTE);
+            const avgWeeklyFTEValues = employees.map(emp => emp.averageWeeklyFTE);
+            const avgMonthlyFTEValues = employees.map(emp => emp.averageMonthlyFTE);
+
+            // Determine maxima for scaling
+            const maxAvgDailyHours = Math.max(...avgDailyHoursValues);
+            const maxAvgWeeklyHours = Math.max(...avgWeeklyHoursValues);
+            const maxAvgMonthlyHours = Math.max(...avgMonthlyHoursValues);
+            const maxDailyFTE = Math.max(...avgDailyFTEValues);
+            const maxWeeklyFTE = Math.max(...avgWeeklyFTEValues);
+            const maxMonthlyFTE = Math.max(...avgMonthlyFTEValues);
 
             // Build the Total Hours by Employee chart
             const hoursChart = createBarChart('Total Hours by Employee', totalHoursValues, maxTotalHours, 'hours');
             container.appendChild(hoursChart);
 
-            // Build the Average Daily FTE by Employee chart
-            const fteChart = createBarChart('Average Daily FTE by Employee', avgFTEValues, maxAvgDailyFTE, 'fte');
-            container.appendChild(fteChart);
+            // Build average hours charts
+            const dailyHoursChart = createBarChart('Average Daily Hours by Employee', avgDailyHoursValues, maxAvgDailyHours, 'hours');
+            container.appendChild(dailyHoursChart);
+            const weeklyHoursChart = createBarChart('Average Weekly Hours by Employee', avgWeeklyHoursValues, maxAvgWeeklyHours, 'hours');
+            container.appendChild(weeklyHoursChart);
+            const monthlyHoursChart = createBarChart('Average Monthly Hours by Employee', avgMonthlyHoursValues, maxAvgMonthlyHours, 'hours');
+            container.appendChild(monthlyHoursChart);
+
+            // Build average FTE charts
+            const dailyFTEChart = createBarChart('Average Daily FTE by Employee', avgDailyFTEValues, maxDailyFTE, 'fte');
+            container.appendChild(dailyFTEChart);
+            const weeklyFTEChart = createBarChart('Average Weekly FTE by Employee', avgWeeklyFTEValues, maxWeeklyFTE, 'fte');
+            container.appendChild(weeklyFTEChart);
+            const monthlyFTEChart = createBarChart('Average Monthly FTE by Employee', avgMonthlyFTEValues, maxMonthlyFTE, 'fte');
+            container.appendChild(monthlyFTEChart);
         }
     </script>
 </body>
