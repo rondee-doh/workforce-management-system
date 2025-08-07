@@ -1145,9 +1145,12 @@
                         <option value="average-hours">Average Hours</option>
                         <option value="fte">FTE</option>
                     </select>
-                    <!-- Period selection populated dynamically based on timeframe (all, specific day/week/month) -->
-                    <label for="periodSelect" id="periodLabel" style="display:none;"><strong>Period:</strong></label>
-                    <select id="periodSelect" style="display:none; margin-right:10px;"></select>
+                    <!-- Generate button for the dashboard.  The nested menu only
+                         includes timeframe and metric selections; the period
+                         selector was removed because it caused issues with the
+                         chart not rendering.  When the user clicks this button
+                         the chart will be generated for the chosen timeframe
+                         and metric across all available data. -->
                     <button class="btn" id="generateChartBtn" onclick="generateDashboardChart();" style="padding:6px 12px;">Generate Chart</button>
                 </div>
                 <!-- The dashboard-container will be populated with charts only when the user triggers generation. -->
@@ -1616,8 +1619,14 @@
          */
         function updatePeriodOptions() {
             const timeScale = document.getElementById('timeScaleSelect').value;
+            // The period selector has been removed from the dashboard menu. If no
+            // period select exists, there's nothing to update. Guard against
+            // null references here so the function can be safely called.
             const periodSelect = document.getElementById('periodSelect');
             const periodLabel = document.getElementById('periodLabel');
+            if (!periodSelect || !periodLabel || !dashboardPeriods) {
+                return;
+            }
             let list = [];
             if (timeScale === 'daily') {
                 list = dashboardPeriods.daily;
@@ -1655,7 +1664,9 @@
         function generateDashboardChart() {
             const timeScale = document.getElementById('timeScaleSelect').value;
             const metric = document.getElementById('metricSelect').value;
-            const period = document.getElementById('periodSelect').value;
+            // A separate period selector has been removed from the dashboard.
+            // Always aggregate over all periods when generating charts.
+            const period = 'all';
             const container = document.querySelector('.dashboard-container');
             container.innerHTML = '';
             if (!dashboardEmployees || dashboardEmployees.length === 0) return;
