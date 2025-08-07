@@ -284,6 +284,25 @@
                 padding: 6px;
             }
         }
+
+        /*
+         * Styles for the dashboard container used to display charts.  The
+         * container uses a flexible layout so charts wrap nicely on
+         * smaller screens.  Each canvas is given a minimum size to
+         * improve readability while remaining responsive.
+         */
+        .dashboard-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .dashboard-container canvas {
+            flex: 1 1 400px;
+            max-width: 100%;
+            height: 300px;
+        }
     </style>
 </head>
 <body>
@@ -387,6 +406,7 @@
                         <option value="sick">Sick Leave</option>
                         <option value="maternity">Maternity Leave</option>
                         <option value="paternity">Paternity Leave</option>
+                        <option value="others">Others</option>
                     </select>
                 </div>
 
@@ -507,8 +527,12 @@
         }
 
         function calculateHoursWorked(startTime, endTime, leaveStatus) {
-            if (leaveStatus !== 'none') {
-                return 0; // No hours if on leave
+            // Treat any type of leave as a full 8‑hour day.  This implements the
+            // "Authorized Leave Day" rule where leave days count as a full
+            // working day for FTE calculations.  If no leave is selected
+            // (`leaveStatus` is "none"), fall through to normal calculation.
+            if (leaveStatus && leaveStatus !== 'none') {
+                return 8;
             }
 
             const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -1034,12 +1058,24 @@
                     <li><strong>Daily FTE:</strong> Daily Hours ÷ 8 hours</li>
                     <li><strong>Weekly FTE:</strong> Weekly Hours ÷ 40 hours</li>
                     <li><strong>Monthly FTE:</strong> Monthly Hours ÷ 160 hours</li>
-                    <li><strong>Leave Days:</strong> Count as 0 hours worked</li>
+                    <li><strong>Authorized Leave Day:</strong> Count as 8 hours worked</li>
                     <li><strong>Overtime:</strong> Hours beyond 8 hours per day (when authorized)</li>
                 </ul>
+
+                <h3>📊 Dashboard Overview</h3>
+                <div class="dashboard-container">
+                    <canvas id="totalHoursChart"></canvas>
+                    <canvas id="averageFTEChart"></canvas>
+                </div>
             `;
             
             display.innerHTML = html;
+
+            // After injecting the report HTML, build the dashboard charts
+            // using the aggregated employee data.  The charts visualize
+            // total hours and average FTE per employee to help tell a
+            // compelling story about workforce utilization.
+            setupDashboard(employees);
         }
 
         // Initialize display
@@ -1272,6 +1308,126 @@
                 showAlert('Error exporting to Excel. Please try again.', 'error');
             }
         }
+
+        /*
+         * Set up interactive dashboard charts using Chart.js.  This helper
+         * function is called after the report is rendered and takes the
+         * array of aggregated employee objects.  It builds bar charts for
+         * total hours and average daily FTE per employee.  Previous chart
+         * instances are destroyed to avoid memory leaks on repeated report
+         * generation.
+         */
+        let chartInstances = [];
+        function setupDashboard(employees) {
+            // Destroy any existing charts to allow re-rendering
+            chartInstances.forEach(chart => chart.destroy());
+            chartInstances = [];
+
+            if (!Array.isArray(employees) || employees.length === 0) {
+                return;
+            }
+
+            // Prepare data for charts
+            const names = employees.map(emp => emp.name);
+            const totalHours = employees.map(emp => parseFloat(emp.totalHours.toFixed(2)));
+            const avgDailyFTE = employees.map(emp => parseFloat(emp.averageDailyFTE.toFixed(3)));
+
+            // Total Hours Chart
+            const hoursCanvas = document.getElementById('totalHoursChart');
+            if (hoursCanvas && hoursCanvas.getContext) {
+                const ctx = hoursCanvas.getContext('2d');
+                chartInstances.push(new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: names,
+                        datasets: [{
+                            label: 'Total Hours',
+                            data: totalHours,
+                            backgroundColor: 'rgba(103, 126, 234, 0.6)',
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Hours'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Employee'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Total Hours by Employee'
+                            },
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                }));
+            }
+
+            // Average Daily FTE Chart
+            const fteCanvas = document.getElementById('averageFTEChart');
+            if (fteCanvas && fteCanvas.getContext) {
+                const ctx = fteCanvas.getContext('2d');
+                chartInstances.push(new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: names,
+                        datasets: [{
+                            label: 'Average Daily FTE',
+                            data: avgDailyFTE,
+                            backgroundColor: 'rgba(118, 212, 186, 0.6)',
+                            borderColor: 'rgba(5, 150, 105, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'FTE'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Employee'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Average Daily FTE by Employee'
+                            },
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                }));
+            }
+        }
     </script>
+    <!-- Include Chart.js for rendering dashboard charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
