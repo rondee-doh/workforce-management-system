@@ -298,10 +298,55 @@
             margin-top: 20px;
         }
 
-        .dashboard-container canvas {
+        /*
+         * Styles for the custom bar charts used in the dashboard.  Each
+         * chart consists of a heading followed by rows showing a label
+         * and a horizontal bar proportional to the value.  The bar
+         * contains a data-value attribute so the number can be shown
+         * inside the bar via a pseudo-element.
+         */
+        .custom-bar-chart {
             flex: 1 1 400px;
-            max-width: 100%;
-            height: 300px;
+            min-width: 300px;
+        }
+
+        .custom-bar-chart h4 {
+            margin-bottom: 8px;
+            font-size: 1rem;
+            color: #3730a3; /* deep indigo for chart titles */
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .bar-label {
+            width: 40%;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 8px;
+        }
+
+        .bar {
+            position: relative;
+            height: 18px;
+            background-color: rgba(99, 102, 241, 0.6);
+            border-radius: 4px;
+            flex-grow: 1;
+        }
+
+        .bar::after {
+            content: attr(data-value);
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            color: #1f2937; /* dark slate */
         }
     </style>
     <!-- Include Chart.js for the dashboard visualizations -->
@@ -1065,10 +1110,8 @@
                 </ul>
 
                 <h3>📊 Dashboard Overview</h3>
-                <div class="dashboard-container">
-                    <canvas id="totalHoursChart"></canvas>
-                    <canvas id="averageFTEChart"></canvas>
-                </div>
+                <!-- The dashboard-container will be populated with simple bar charts via setupDashboard() -->
+                <div class="dashboard-container"></div>
             `;
             
             display.innerHTML = html;
@@ -1319,114 +1362,71 @@
          * instances are destroyed to avoid memory leaks on repeated report
          * generation.
          */
-        let chartInstances = [];
+        /**
+         * Build simple horizontal bar charts in place of the previous
+         * Chart.js implementation.  The charts visualize total hours and
+         * average daily FTE per employee using plain HTML and CSS for
+         * maximum compatibility and zero external dependencies.  Each
+         * chart is rendered inside the .dashboard-container with its own
+         * heading and rows.
+         *
+         * @param {Array} employees - aggregated employee summary data
+         */
         function setupDashboard(employees) {
-            // Destroy any existing charts to allow re-rendering
-            chartInstances.forEach(chart => chart.destroy());
-            chartInstances = [];
+            const container = document.querySelector('.dashboard-container');
+            // Clear any existing content
+            container.innerHTML = '';
 
             if (!Array.isArray(employees) || employees.length === 0) {
                 return;
             }
 
-            // Prepare data for charts
-            const names = employees.map(emp => emp.name);
-            const totalHours = employees.map(emp => parseFloat(emp.totalHours.toFixed(2)));
-            const avgDailyFTE = employees.map(emp => parseFloat(emp.averageDailyFTE.toFixed(3)));
+            // Compute maximums for scaling bars
+            const maxTotalHours = Math.max(...employees.map(emp => emp.totalHours));
+            const maxAvgDailyFTE = Math.max(...employees.map(emp => emp.averageDailyFTE));
 
-            // Total Hours Chart
-            const hoursCanvas = document.getElementById('totalHoursChart');
-            if (hoursCanvas && hoursCanvas.getContext) {
-                const ctx = hoursCanvas.getContext('2d');
-                chartInstances.push(new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: names,
-                        datasets: [{
-                            label: 'Total Hours',
-                            data: totalHours,
-                            backgroundColor: 'rgba(103, 126, 234, 0.6)',
-                            borderColor: 'rgba(79, 70, 229, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Hours'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Employee'
-                                }
-                            }
-                        },
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Total Hours by Employee'
-                            },
-                            legend: {
-                                display: false
-                            }
-                        }
-                    }
-                }));
+            // Helper to create a bar chart section
+            function createBarChart(title, values, maxValue, unit) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'custom-bar-chart';
+                // Title
+                const header = document.createElement('h4');
+                header.textContent = title;
+                chartDiv.appendChild(header);
+                // Rows
+                employees.forEach((emp, index) => {
+                    const value = values[index];
+                    // Avoid division by zero
+                    const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
+                    const row = document.createElement('div');
+                    row.className = 'bar-row';
+                    // Label
+                    const label = document.createElement('div');
+                    label.className = 'bar-label';
+                    label.textContent = `${emp.name}`;
+                    row.appendChild(label);
+                    // Bar
+                    const bar = document.createElement('div');
+                    bar.className = 'bar';
+                    bar.style.width = percentage + '%';
+                    bar.setAttribute('data-value', `${value.toFixed(unit === 'hours' ? 2 : 3)}`);
+                    row.appendChild(bar);
+                    chartDiv.appendChild(row);
+                });
+                return chartDiv;
             }
 
-            // Average Daily FTE Chart
-            const fteCanvas = document.getElementById('averageFTEChart');
-            if (fteCanvas && fteCanvas.getContext) {
-                const ctx = fteCanvas.getContext('2d');
-                chartInstances.push(new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: names,
-                        datasets: [{
-                            label: 'Average Daily FTE',
-                            data: avgDailyFTE,
-                            backgroundColor: 'rgba(118, 212, 186, 0.6)',
-                            borderColor: 'rgba(5, 150, 105, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'FTE'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Employee'
-                                }
-                            }
-                        },
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Average Daily FTE by Employee'
-                            },
-                            legend: {
-                                display: false
-                            }
-                        }
-                    }
-                }));
-            }
+            // Prepare values for charts
+            const totalHoursValues = employees.map(emp => emp.totalHours);
+            const avgFTEValues = employees.map(emp => emp.averageDailyFTE);
+
+            // Build the Total Hours by Employee chart
+            const hoursChart = createBarChart('Total Hours by Employee', totalHoursValues, maxTotalHours, 'hours');
+            container.appendChild(hoursChart);
+
+            // Build the Average Daily FTE by Employee chart
+            const fteChart = createBarChart('Average Daily FTE by Employee', avgFTEValues, maxAvgDailyFTE, 'fte');
+            container.appendChild(fteChart);
         }
     </script>
 </body>
