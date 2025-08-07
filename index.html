@@ -1422,243 +1422,6 @@
             }
 
         // ---------------------------------------------------------------------------
-        // Dashboard helper functions for nested dropdown menu
-        //
-        // The following code prepares datasets for daily, weekly and monthly
-        // selections; populates the nested dropdown menu; updates metric and
-        // period options based on user selection; and generates a bar chart
-        // dynamically when the user requests one.  This allows for a
-        // cascading user experience where charts appear only after the user
-        // chooses a timeframe (daily/weekly/monthly), a metric (average
-        // hours or FTE), and optionally a specific period such as a
-        // particular day, week or month.  See the HTML for the
-        // .dashboard-menu element where these selects live.
-
-        // Global variables to hold processed employees and period lists
-        let dashboardEmployees = [];
-        let dashboardPeriods = { daily: [], weekly: [], monthly: [] };
-
-        /**
-         * Prepare dashboard data by calculating daily, weekly and monthly
-         * dictionaries for each employee and collecting unique period keys
-         * across all employees.  These period keys populate the period
-         * dropdown so the user can filter by a specific day, week or
-         * month.  The function also precomputes average weekly and
-         * monthly hours for use when the user selects the "All" option.
-         *
-         * @param {Array<Object>} employees - aggregated employee data
-         */
-        function prepareDashboardData(employees) {
-            const dailySet = new Set();
-            const weeklySet = new Set();
-            const monthlySet = new Set();
-            // Iterate over each employee and build dictionaries
-            employees.forEach(emp => {
-                const dailyDict = {};
-                const weeklyDict = {};
-                const monthlyDict = {};
-                // Find all time entries for this employee
-                timeEntries.filter(e => e.employee === emp.name).forEach(entry => {
-                    // Daily key (YYYY-MM-DD)
-                    const dayKey = entry.date;
-                    dailyDict[dayKey] = (dailyDict[dayKey] || 0) + entry.hoursWorked;
-                    dailySet.add(dayKey);
-                    // Weekly key (YYYY-Wxx)
-                    const entryDate = new Date(entry.date);
-                    const weekNum = getWeekNumber(entryDate);
-                    const year = entryDate.getFullYear();
-                    const weekKey = `${year}-W${weekNum.toString().padStart(2, '0')}`;
-                    weeklyDict[weekKey] = (weeklyDict[weekKey] || 0) + entry.hoursWorked;
-                    weeklySet.add(weekKey);
-                    // Monthly key (YYYY-MM)
-                    const monthKey = getMonthKey(entryDate);
-                    monthlyDict[monthKey] = (monthlyDict[monthKey] || 0) + entry.hoursWorked;
-                    monthlySet.add(monthKey);
-                });
-                // Attach dictionaries to employee for quick lookups
-                emp.dailyHoursDict = dailyDict;
-                emp.weeklyHoursDict = weeklyDict;
-                emp.monthlyHoursDict = monthlyDict;
-                // Precompute average weekly hours for 'All' option
-                const weeklyValues = Object.values(weeklyDict);
-                emp.averageWeeklyHours = weeklyValues.length > 0 ? weeklyValues.reduce((sum, h) => sum + h, 0) / weeklyValues.length : 0;
-                // Precompute average monthly hours for 'All' option
-                const monthlyValues = Object.values(monthlyDict);
-                emp.averageMonthlyHours = monthlyValues.length > 0 ? monthlyValues.reduce((sum, h) => sum + h, 0) / monthlyValues.length : 0;
-            });
-            // Convert sets to sorted arrays and store globally
-            dashboardPeriods.daily = Array.from(dailySet).sort();
-            dashboardPeriods.weekly = Array.from(weeklySet).sort();
-            dashboardPeriods.monthly = Array.from(monthlySet).sort();
-        }
-
-        /**
-         * Populate the dashboard menu selects.  This function delegates to
-         * updateMetricOptions() and updatePeriodOptions() so the selects
-         * reflect the current timeframe selection.  Call this after
-         * prepareDashboardData() whenever the employee data changes.
-         */
-        function populateDashboardMenu() {
-            updateMetricOptions();
-            updatePeriodOptions();
-        }
-
-        /**
-         * Update the metric select based on the selected timeframe.  For
-         * simplicity both daily, weekly and monthly timeframes support
-         * the same two metrics: average hours and FTE.  The value of
-         * each option is lower-case with dashes so it can be used in
-         * logic more easily.
-         */
-        function updateMetricOptions() {
-            const metricSelect = document.getElementById('metricSelect');
-            // Clear existing options
-            metricSelect.innerHTML = '';
-            ['Average Hours', 'FTE'].forEach(label => {
-                const option = document.createElement('option');
-                option.value = label.toLowerCase().replace(/ /g, '-');
-                option.textContent = label;
-                metricSelect.appendChild(option);
-            });
-        }
-
-        /**
-         * Update the period options based on the selected timeframe.  Shows
-         * or hides the period dropdown depending on whether any periods
-         * exist.  Always includes an "All" option so the user can view
-         * aggregated averages across all days, weeks or months.
-         */
-        function updatePeriodOptions() {
-            const timeScale = document.getElementById('timeScaleSelect').value;
-            const periodSelect = document.getElementById('periodSelect');
-            const periodLabel = document.getElementById('periodLabel');
-            // Determine which list of periods to use
-            let list = [];
-            if (timeScale === 'daily') {
-                list = dashboardPeriods.daily;
-            } else if (timeScale === 'weekly') {
-                list = dashboardPeriods.weekly;
-            } else if (timeScale === 'monthly') {
-                list = dashboardPeriods.monthly;
-            }
-            // Clear existing options
-            periodSelect.innerHTML = '';
-            // Always provide the "All" option
-            const allOpt = document.createElement('option');
-            allOpt.value = 'all';
-            allOpt.textContent = 'All';
-            periodSelect.appendChild(allOpt);
-            // Add each specific period
-            list.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p;
-                opt.textContent = p;
-                periodSelect.appendChild(opt);
-            });
-            // Show or hide the period controls
-            if (list.length > 0) {
-                periodLabel.style.display = '';
-                periodSelect.style.display = '';
-            } else {
-                periodLabel.style.display = 'none';
-                periodSelect.style.display = 'none';
-            }
-        }
-
-        /**
-         * Generate a bar chart based on the user's selections in the
-         * dashboard menu.  Computes values for each employee according
-         * to the selected timeframe, metric and period (all or specific).
-         * Uses the existing createBarChart helper to render the chart.
-         */
-        function generateDashboardChart() {
-            const timeScale = document.getElementById('timeScaleSelect').value;
-            const metric = document.getElementById('metricSelect').value;
-            const period = document.getElementById('periodSelect').value;
-            const container = document.querySelector('.dashboard-container');
-            // Clear any existing charts
-            container.innerHTML = '';
-            if (!dashboardEmployees || dashboardEmployees.length === 0) return;
-            const values = [];
-            let maxValue = 0;
-            let unit = 'hours';
-            // Compute values per employee
-            dashboardEmployees.forEach(emp => {
-                let value = 0;
-                if (timeScale === 'daily') {
-                    if (period === 'all') {
-                        if (metric === 'average-hours') {
-                            value = emp.averageDailyHours || 0;
-                            unit = 'hours';
-                        } else {
-                            value = emp.averageDailyFTE || 0;
-                            unit = 'fte';
-                        }
-                    } else {
-                        const hours = emp.dailyHoursDict && emp.dailyHoursDict[period] ? emp.dailyHoursDict[period] : 0;
-                        if (metric === 'average-hours') {
-                            value = hours;
-                            unit = 'hours';
-                        } else {
-                            value = hours / 8;
-                            unit = 'fte';
-                        }
-                    }
-                } else if (timeScale === 'weekly') {
-                    if (period === 'all') {
-                        if (metric === 'average-hours') {
-                            value = emp.averageWeeklyHours || 0;
-                            unit = 'hours';
-                        } else {
-                            value = emp.averageWeeklyFTE || 0;
-                            unit = 'fte';
-                        }
-                    } else {
-                        const hours = emp.weeklyHoursDict && emp.weeklyHoursDict[period] ? emp.weeklyHoursDict[period] : 0;
-                        if (metric === 'average-hours') {
-                            value = hours;
-                            unit = 'hours';
-                        } else {
-                            value = hours / 40;
-                            unit = 'fte';
-                        }
-                    }
-                } else if (timeScale === 'monthly') {
-                    if (period === 'all') {
-                        if (metric === 'average-hours') {
-                            value = emp.averageMonthlyHours || 0;
-                            unit = 'hours';
-                        } else {
-                            value = emp.averageMonthlyFTE || 0;
-                            unit = 'fte';
-                        }
-                    } else {
-                        const hours = emp.monthlyHoursDict && emp.monthlyHoursDict[period] ? emp.monthlyHoursDict[period] : 0;
-                        if (metric === 'average-hours') {
-                            value = hours;
-                            unit = 'hours';
-                        } else {
-                            value = hours / 160;
-                            unit = 'fte';
-                        }
-                    }
-                }
-                values.push(value);
-                if (value > maxValue) maxValue = value;
-            });
-            // Build chart title
-            const metricName = metric === 'average-hours' ? 'Hours' : 'FTE';
-            const timeframeName = timeScale.charAt(0).toUpperCase() + timeScale.slice(1);
-            let title = '';
-            if (period === 'all') {
-                title = `Average ${timeframeName} ${metricName} by Employee`;
-            } else {
-                title = `${timeframeName} ${metricName} (${period}) by Employee`;
-            }
-            // Create and append the chart
-            const chartDiv = createBarChart(title, values, maxValue, unit === 'hours' ? 'hours' : 'fte');
-            container.appendChild(chartDiv);
-        }
 
             // Compute maximums for scaling bars
             const maxTotalHours = Math.max(...employees.map(emp => emp.totalHours));
@@ -1965,7 +1728,38 @@
             } else {
                 title = `${timeframeName} ${metricName} (${period}) by Employee`;
             }
-            const chartDiv = createBarChart(title, values, maxValue, unit === 'hours' ? 'hours' : 'fte');
+            // Build the chart manually using the dashboardEmployees array.  This
+            // avoids relying on createBarChart(), which is scoped inside
+            // setupDashboard() and therefore not accessible here.  Each chart
+            // shows bars proportional to the maximum value with labels and
+            // formatted data values (hours with 2 decimals, FTE with 3).
+            const chartDiv = document.createElement('div');
+            chartDiv.className = 'custom-bar-chart';
+            // Title element
+            const header = document.createElement('h4');
+            header.textContent = title;
+            chartDiv.appendChild(header);
+            // For each employee, create a row with label and bar
+            dashboardEmployees.forEach((emp, index) => {
+                const value = values[index];
+                const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
+                const row = document.createElement('div');
+                row.className = 'bar-row';
+                // Employee name label
+                const label = document.createElement('div');
+                label.className = 'bar-label';
+                label.textContent = emp.name;
+                row.appendChild(label);
+                // Bar element
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.width = percentage + '%';
+                // Determine number formatting based on unit
+                const formattedValue = (unit === 'hours') ? value.toFixed(2) : value.toFixed(3);
+                bar.setAttribute('data-value', `${formattedValue}`);
+                row.appendChild(bar);
+                chartDiv.appendChild(row);
+            });
             container.appendChild(chartDiv);
         }
     </script>
