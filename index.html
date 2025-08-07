@@ -1180,13 +1180,12 @@
         // the in-memory list with persisted data and refresh the display.
         loadSavedData();
 
-        // Attach event listeners to action buttons once the DOM has loaded.
-        // Although onclick attributes are specified in the markup, binding
-        // listeners here ensures the functions are available and prevents
-        // potential issues where inline handlers might not fire due to
-        // script execution order.  Each button is looked up by its id; if
-        // present, a click listener is registered.
-        document.addEventListener('DOMContentLoaded', function () {
+        // Attach event listeners to action buttons. Since this script is loaded
+        // at the end of the page, the DOM is already constructed, so we can
+        // safely bind handlers immediately without waiting for DOMContentLoaded.
+        // We still check for the existence of each button before adding
+        // listeners to avoid runtime errors.
+        (function() {
             const addBtn = document.getElementById('addEntryBtn');
             if (addBtn) addBtn.addEventListener('click', addEntry);
             const reportBtn = document.getElementById('generateReportBtn');
@@ -1197,7 +1196,7 @@
             if (saveBtn) saveBtn.addEventListener('click', saveData);
             const clearBtn = document.getElementById('clearDataBtn');
             if (clearBtn) clearBtn.addEventListener('click', clearAllData);
-        });
+        })();
 
         function exportToExcel() {
             if (timeEntries.length === 0) {
