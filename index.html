@@ -483,12 +483,15 @@
                     </select>
                 </div>
 
-                <button type="button" class="btn" onclick="addEntry()">Add Entry</button>
-                <button type="button" class="btn btn-secondary" onclick="generateReport()">Generate Report</button>
-                <button type="button" class="btn" onclick="exportToExcel()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">📊 Export to Excel</button>
+                <!-- Attach ids to control buttons so event listeners can be bound in JavaScript.  
+                     We keep the onclick attributes for backward compatibility, but the ids
+                     allow script-based binding which is more reliable across browsers. -->
+                <button id="addEntryBtn" type="button" class="btn" onclick="addEntry()">Add Entry</button>
+                <button id="generateReportBtn" type="button" class="btn btn-secondary" onclick="generateReport()">Generate Report</button>
+                <button id="exportExcelBtn" type="button" class="btn" onclick="exportToExcel()" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">📊 Export to Excel</button>
                 <!-- New Save Data button to persist entries across sessions -->
-                <button type="button" class="btn" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);" onclick="saveData()">💾 Save Data</button>
-                <button type="button" class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+                <button id="saveDataBtn" type="button" class="btn" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);" onclick="saveData()">💾 Save Data</button>
+                <button id="clearDataBtn" type="button" class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
             </div>
 
             <!-- Current Entries Display -->
@@ -1176,6 +1179,25 @@
         // Load any saved entries from previous sessions. This will overwrite
         // the in-memory list with persisted data and refresh the display.
         loadSavedData();
+
+        // Attach event listeners to action buttons once the DOM has loaded.
+        // Although onclick attributes are specified in the markup, binding
+        // listeners here ensures the functions are available and prevents
+        // potential issues where inline handlers might not fire due to
+        // script execution order.  Each button is looked up by its id; if
+        // present, a click listener is registered.
+        document.addEventListener('DOMContentLoaded', function () {
+            const addBtn = document.getElementById('addEntryBtn');
+            if (addBtn) addBtn.addEventListener('click', addEntry);
+            const reportBtn = document.getElementById('generateReportBtn');
+            if (reportBtn) reportBtn.addEventListener('click', generateReport);
+            const exportBtn = document.getElementById('exportExcelBtn');
+            if (exportBtn) exportBtn.addEventListener('click', exportToExcel);
+            const saveBtn = document.getElementById('saveDataBtn');
+            if (saveBtn) saveBtn.addEventListener('click', saveData);
+            const clearBtn = document.getElementById('clearDataBtn');
+            if (clearBtn) clearBtn.addEventListener('click', clearAllData);
+        });
 
         function exportToExcel() {
             if (timeEntries.length === 0) {
