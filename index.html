@@ -555,11 +555,14 @@
                 showAlert('Please select a task group.', 'error');
                 return false;
             }
-            if (!startTime) {
+            // Consider placeholder values like "--:-- --" (displayed by some timepicker
+            // libraries) as empty as well.  Without this check the form would
+            // incorrectly pass validation even though the time inputs are not set.
+            if (!startTime || startTime.trim() === '--:-- --') {
                 showAlert('Please enter start time.', 'error');
                 return false;
             }
-            if (!endTime) {
+            if (!endTime || endTime.trim() === '--:-- --') {
                 showAlert('Please enter end time.', 'error');
                 return false;
             }
@@ -594,6 +597,45 @@
             showAlert('Entry added successfully!');
         }
 
+        /**
+         * Parse a time string into hour and minute integers. Supports both
+         * 24‑hour format (e.g., "13:45") and 12‑hour format with AM/PM
+         * suffix (e.g., "05:40 AM").  If the input is malformed, returns
+         * {hour: NaN, minute: NaN} so downstream code can handle gracefully.
+         *
+         * @param {string} timeString The time string from the input field
+         * @returns {{hour: number, minute: number}}
+         */
+        function parseTimeString(timeString) {
+            if (!timeString) {
+                return { hour: NaN, minute: NaN };
+            }
+            // Trim whitespace
+            const str = timeString.trim();
+            // Check for AM/PM notation
+            const ampmMatch = str.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+            if (ampmMatch) {
+                let hour = parseInt(ampmMatch[1], 10);
+                const minute = parseInt(ampmMatch[2], 10);
+                const meridian = ampmMatch[3].toUpperCase();
+                if (meridian === 'PM' && hour !== 12) {
+                    hour += 12;
+                }
+                if (meridian === 'AM' && hour === 12) {
+                    hour = 0;
+                }
+                return { hour, minute };
+            }
+            // Otherwise assume 24‑hour format HH:MM
+            const parts = str.split(':');
+            if (parts.length === 2) {
+                const hour = parseInt(parts[0], 10);
+                const minute = parseInt(parts[1], 10);
+                return { hour, minute };
+            }
+            return { hour: NaN, minute: NaN };
+        }
+
         function calculateHoursWorked(startTime, endTime, leaveStatus) {
             // Treat any type of leave as a full 8‑hour day.  This implements the
             // "Authorized Leave Day" rule where leave days count as a full
@@ -603,9 +645,17 @@
                 return 8;
             }
 
-            const [startHour, startMinute] = startTime.split(':').map(Number);
-            const [endHour, endMinute] = endTime.split(':').map(Number);
+            const start = parseTimeString(startTime);
+            const end = parseTimeString(endTime);
+            const startHour = start.hour;
+            const startMinute = start.minute;
+            const endHour = end.hour;
+            const endMinute = end.minute;
             
+            if (isNaN(startHour) || isNaN(startMinute) || isNaN(endHour) || isNaN(endMinute)) {
+                return 0;
+            }
+
             let startTotalMinutes = startHour * 60 + startMinute;
             let endTotalMinutes = endHour * 60 + endMinute;
             
