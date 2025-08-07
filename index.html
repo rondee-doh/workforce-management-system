@@ -932,6 +932,34 @@
                     averageMonthlyFTE: emp.averageMonthlyFTE
                 };
             });
+
+            // Calculate task group distribution early so it can be placed
+            // before the Detailed Employee FTE report.  Build a string of
+            // table rows that will be injected into the HTML template.  If
+            // there are no time entries, this will remain empty.
+            const taskGroups = {};
+            timeEntries.forEach(entry => {
+                if (!taskGroups[entry.taskGroup]) {
+                    taskGroups[entry.taskGroup] = { hours: 0, count: 0 };
+                }
+                taskGroups[entry.taskGroup].hours += entry.hoursWorked;
+                taskGroups[entry.taskGroup].count += 1;
+            });
+            const taskGroupRows = Object.entries(taskGroups)
+                .sort(([, a], [, b]) => b.hours - a.hours)
+                .map(([taskGroup, data]) => {
+                    const percentage = totalHours > 0 ? (data.hours / totalHours * 100).toFixed(1) : '0.0';
+                    const avgHours = data.count > 0 ? (data.hours / data.count).toFixed(2) : '0.00';
+                    return `
+                        <tr>
+                            <td>${taskGroup}</td>
+                            <td>${data.hours.toFixed(2)}</td>
+                            <td>${percentage}%</td>
+                            <td>${data.count}</td>
+                            <td>${avgHours}</td>
+                        </tr>
+                    `;
+                }).join('');
             
             let html = `
                 <div class="report-cards">
@@ -966,6 +994,22 @@
                         <div class="label">Time log entries</div>
                     </div>
                 </div>
+
+                <h3>📊 Task Group Distribution</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Task Group</th>
+                            <th>Total Hours</th>
+                            <th>Percentage</th>
+                            <th>Entries</th>
+                            <th>Avg Hours/Entry</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    ${taskGroupRows}
+                    </tbody>
+                </table>
 
                 <h3>📋 Detailed Employee FTE Report</h3>
                 <table class="data-table">
@@ -1005,50 +1049,6 @@
                     </tbody>
                 </table>
 
-                <h3>📊 Task Group Distribution</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Task Group</th>
-                            <th>Total Hours</th>
-                            <th>Percentage</th>
-                            <th>Entries</th>
-                            <th>Avg Hours/Entry</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            // Calculate task group distribution
-            const taskGroups = {};
-            timeEntries.forEach(entry => {
-                if (!taskGroups[entry.taskGroup]) {
-                    taskGroups[entry.taskGroup] = { hours: 0, count: 0 };
-                }
-                taskGroups[entry.taskGroup].hours += entry.hoursWorked;
-                taskGroups[entry.taskGroup].count += 1;
-            });
-
-            Object.entries(taskGroups)
-                .sort(([,a], [,b]) => b.hours - a.hours) // Sort by hours descending
-                .forEach(([taskGroup, data]) => {
-                    const percentage = (data.hours / totalHours * 100).toFixed(1);
-                    const avgHours = data.count > 0 ? (data.hours / data.count).toFixed(2) : '0.00';
-                    html += `
-                        <tr>
-                            <td>${taskGroup}</td>
-                            <td>${data.hours.toFixed(2)}</td>
-                            <td>${percentage}%</td>
-                            <td>${data.count}</td>
-                            <td>${avgHours}</td>
-                        </tr>
-                    `;
-                });
-
-            html += `
-                    </tbody>
-                </table>
-            `;
 
             // Build the weekly summary section.  It shows per‑employee totals,
             // counts and averages so that users can gauge effort each week.
@@ -1554,14 +1554,19 @@
                 const dailyDict = {};
                 const weeklyDict = {};
                 const monthlyDict = {};
-                // Find all time entries for this employee
-                timeEntries.filter(e => e.employee === emp.name).forEach(entry => {
+                // Find all time entries for this employee.  Use the correct
+                // property names from the time entry structure (employeeName
+                // and logDate).  Previously this used e.employee and e.date,
+                // which are undefined on our entry objects and resulted in
+                // empty dictionaries.  Fixing these references ensures that
+                // weekly and monthly averages compute correctly.
+                timeEntries.filter(e => e.employeeName === emp.name).forEach(entry => {
                     // Daily key (YYYY-MM-DD)
-                    const dayKey = entry.date;
+                    const dayKey = entry.logDate;
                     dailyDict[dayKey] = (dailyDict[dayKey] || 0) + entry.hoursWorked;
                     dailySet.add(dayKey);
                     // Weekly key (YYYY-Wxx)
-                    const entryDate = new Date(entry.date);
+                    const entryDate = new Date(entry.logDate);
                     const weekNum = getWeekNumber(entryDate);
                     const year = entryDate.getFullYear();
                     const weekKey = `${year}-W${weekNum.toString().padStart(2, '0')}`;
