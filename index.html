@@ -1137,9 +1137,14 @@
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
                     </select>
-                    <!-- Metric selection (average hours or FTE) -->
+                    <!-- Metric selection (average hours or FTE).  Provide default
+                         options to ensure the dropdown is populated even if
+                         updateMetricOptions() is not called for some reason. -->
                     <label for="metricSelect"><strong>Metric:</strong></label>
-                    <select id="metricSelect" onchange="updatePeriodOptions();" style="margin-right:10px;"></select>
+                    <select id="metricSelect" onchange="updatePeriodOptions();" style="margin-right:10px;">
+                        <option value="average-hours">Average Hours</option>
+                        <option value="fte">FTE</option>
+                    </select>
                     <!-- Period selection populated dynamically based on timeframe (all, specific day/week/month) -->
                     <label for="periodSelect" id="periodLabel" style="display:none;"><strong>Period:</strong></label>
                     <select id="periodSelect" style="display:none; margin-right:10px;"></select>
