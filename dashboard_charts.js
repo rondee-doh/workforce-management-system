@@ -54,7 +54,50 @@
     return true;
   }
 
-  // Gather a sorted list of unique employee names from the stored entries.
+  // A static fallback list of employee names used if no names are found in
+  // storage or on the page.  This list mirrors the options in the main
+  // employee dropdown of index.html.  Having this fallback ensures the
+  // dashboard always has something to show even before any entries are
+  // added and if DOM queries fail for some reason.
+  const DEFAULT_EMPLOYEE_NAMES = [
+    'DR. ARLENE S. SY',
+    'MR. ALLEN JAY P. GONDA',
+    'MR. NEIL IRVING QUERUBIN',
+    'MS. MICHELLE M. YGAR',
+    'MR. REY V. ROLLON',
+    'MR. NEREO VILLAFLORES',
+    'MS. NADIA CZARINA MAE CORTUNA',
+    'MS. GENECA JANEL GENETA-HALUM',
+    'MS. EUNICE TADALAN-QUIBOLOY',
+    'MS. JULIE CHRISTINE BANDIOLA',
+    'MS. MARIA LANY ROSE BRIONES',
+    'MS. MARY AUBREY FINEZA',
+    'MR. RAFH L. MARASIGAN',
+    'MR. LAWRENCE EDWARD MANEJA',
+    'MS. AYCA P. HERNANDEZ',
+    'MS.DANA TWAIN SOLANO',
+    'MR. KEVIN JOHN DANDOY',
+    'MR. ROMMEL L. CALANO',
+    'MR. ERMIL D. SADOL',
+    'MR. MARK RAVEN JAY G. DULAY',
+    'MS. LYNNE DENISE TIQUIS',
+    'ENGR. MARK JUDE GUERRERO',
+    'MR. JUN JUN ESGUERRA III',
+    'MS. JEDY ARA TURGA',
+    'MS. MARY SHIELL PANGANIBAN',
+    'MS. CAROL CALLO',
+    'MS. ARMI A. CABITAC',
+    'MR. ALDRIN VALBUENA',
+    'MS. MARIA MAGNA HERNANDEZ-TRIA',
+    'MR. JAN LESTER O. EDJAN',
+    'MR. ARDENNES ESAR',
+    'MR. JAY REYES'
+  ];
+
+  // Gather a sorted list of unique employee names from the stored entries
+  // and from the main form.  If none are found, falls back to the
+  // DEFAULT_EMPLOYEE_NAMES array defined above.  This function ensures
+  // duplicates are removed and results are sorted alphabetically.
   function getEmployeeNames() {
     const entries = getStoredEntries();
     const names = [];
@@ -67,7 +110,6 @@
     }
     // Also collect names from the main form's employee select dropdown
     try {
-      // Attempt several selectors to find the employee select element
       const formSelect = document.querySelector(
         'select[id="employeeName"], select[name="employeeName"], select[id*="employeeName"]'
       );
@@ -86,6 +128,12 @@
       }
     } catch (err) {
       // Fail silently if DOM access errors occur
+    }
+    // If no names found, use the default list
+    if (names.length === 0) {
+      DEFAULT_EMPLOYEE_NAMES.forEach((n) => {
+        if (!names.includes(n)) names.push(n);
+      });
     }
     return names.sort();
   }
@@ -311,6 +359,15 @@
   // immediately after the reports section.  The dashboard and logs are hidden
   // by default; toggling them is handled by other functions.
   function initDashboard() {
+    // Avoid creating duplicate dashboard sections.  If a wrapper with the
+    // expected ID already exists, mark the dashboard as initialised and
+    // return early.  This guards against multiple invocations when the
+    // user repeatedly toggles the dashboard or if Chart.js loads late.
+    const existingWrapper = document.getElementById('dashboard-section');
+    if (existingWrapper) {
+      dashboardInitialized = true;
+      return;
+    }
     if (dashboardInitialized) return;
     dashboardInitialized = true;
 
