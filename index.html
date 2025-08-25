@@ -371,8 +371,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <!-- Include Task Group Pie Chart code -->
     <script src="pie_chart.js"></script>
-    <!-- Include Dashboard charts and logs tracker code -->
-    <script src="dashboard_charts.js"></script>
     <!-- Include Dashboard donut charts and logs tracker -->
     <script src="dashboard_charts.js"></script>
 </head>
@@ -498,6 +496,9 @@
                 <!-- New Save Data button to persist entries across sessions -->
                 <button id="saveDataBtn" type="button" class="btn" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);" onclick="saveData()">💾 Save Data</button>
                 <button id="clearDataBtn" type="button" class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+                <!-- Added Logs Tracker and Dashboard buttons for toggling additional features -->
+                <button id="logsTrackerBtn" type="button" class="btn btn-secondary">Logs Tracker</button>
+                <button id="dashboardBtn" type="button" class="btn btn-secondary">Dashboard</button>
             </div>
 
             <!-- Current Entries Display -->
