@@ -1,27 +1,49 @@
 (() => {
-  // Helper to retrieve stored entries from localStorage or global variables
+  /*
+   * Dashboard and Logs Tracker Script
+   *
+   * This script injects a dashboard into the application that
+   * summarizes hours worked by task group for an individual employee
+   * or across all employees, using Chart.js doughnut charts.  It
+   * exposes two buttons on the page—“Logs Tracker” and “Dashboard”—
+   * which toggle the visibility of the logs table and the dashboard
+   * respectively.  A “Generate Chart” button in each chart section
+   * triggers the computation and rendering of the donut chart based
+   * on the selected employee and date range.
+   */
+
+  // -----------------------------------------------------------------------------
+  // Data retrieval helpers
+  //
+  // Retrieve stored entries from localStorage or from globally available arrays
+  // used by the rest of the application.  Different keys are tried to remain
+  // compatible with earlier versions of the app.
   function getStoredEntries() {
-    const tryKeys = ['workEntries','entries','timeEntries','fteEntries','storedEntries'];
+    const tryKeys = ['workEntries', 'entries', 'timeEntries', 'fteEntries', 'storedEntries'];
     for (const k of tryKeys) {
       try {
         const v = JSON.parse(localStorage.getItem(k));
         if (Array.isArray(v) && v.length) return v;
-      } catch(e) {}
+      } catch (e) {}
     }
-    // global arrays fallbacks
+    // fallback to any global arrays if present
     if (Array.isArray(window.entries) && window.entries.length) return window.entries;
     if (Array.isArray(window.workEntries) && window.workEntries.length) return window.workEntries;
     return [];
   }
 
-  // Convert a date-like value to a Date with no time
+  // Convert a date-like value into a Date object at midnight (local time).  If
+  // the input is invalid, returns null.  This is used to compare dates
+  // independently of time.
   function toDateOnly(d) {
     const dt = new Date(d);
     if (isNaN(dt)) return null;
     return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
   }
 
-  // Determine if a date string is between two dates inclusive
+  // Determine whether an entry date falls within the inclusive range defined by
+  // start and end dates.  If either boundary is null/undefined, it is treated
+  // as open-ended.  Returns true if the date matches, false otherwise.
   function inBetween(entryDate, start, end) {
     const e = toDateOnly(entryDate);
     if (!e) return false;
@@ -32,7 +54,7 @@
     return true;
   }
 
-  // Gather unique employee names from stored entries
+  // Gather a sorted list of unique employee names from the stored entries.
   function getEmployeeNames() {
     const entries = getStoredEntries();
     const names = [];
@@ -45,7 +67,29 @@
     return names.sort();
   }
 
-  // Aggregate hours by task group for a given employee and date range
+  // Parse a time string such as "HH:MM" or "HH:MM AM/PM" into a Date object on
+  // the current day.  Returns null if parsing fails.  Handles 12‑hour and
+  // 24‑hour formats.
+  function parseTime(t) {
+    if (!t) return null;
+    const s = String(t).trim();
+    const ampm = s.match(/am|pm/i);
+    let [h, m] = s.replace(/am|pm/i, '').trim().split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return null;
+    if (ampm) {
+      const ap = ampm[0].toLowerCase();
+      if (ap === 'pm' && h < 12) h += 12;
+      if (ap === 'am' && h === 12) h = 0;
+    }
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  }
+
+  // Compute total hours worked by task group for a given employee between
+  // startDate and endDate.  If employee is null or empty, all employees are
+  // considered.  The returned data is an array of [taskGroup, hours] tuples
+  // sorted descending by hours.
   function aggregateForEmployee(employee, startDate, endDate) {
     const raw = getStoredEntries();
     const map = {};
@@ -55,11 +99,9 @@
       if (!inBetween(e.logDate || e.date || e.LogDate, startDate, endDate)) continue;
       const tg = (e.taskGroup || e.TaskGroup || e.group || 'Unspecified').trim();
       let hrs;
-      // compute hours
       if (typeof e.hoursWorked === 'number' && isFinite(e.hoursWorked)) {
         hrs = Math.max(0, e.hoursWorked);
       } else {
-        // derive from startTime/endTime
         const st = parseTime(e.startTime);
         const et = parseTime(e.endTime);
         if (!st || !et) continue;
@@ -69,11 +111,11 @@
       }
       map[tg] = (map[tg] || 0) + hrs;
     }
-    // sort descending
-    return Object.entries(map).sort((a,b) => b[1] - a[1]);
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }
 
-  // Aggregate hours by task group across all employees for a time range label (daily/weekly/monthly)
+  // Compute total hours worked by task group across all employees for a given
+  // range label.  The range can be "daily", "weekly", "monthly" or "all".
   function aggregateForAll(range) {
     const raw = getStoredEntries();
     const today = new Date();
@@ -112,27 +154,11 @@
       }
       map[tg] = (map[tg] || 0) + hrs;
     }
-    return Object.entries(map).sort((a,b) => b[1] - a[1]);
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }
 
-  // Parse times like "HH:MM" or "HH:MM AM/PM"
-  function parseTime(t) {
-    if (!t) return null;
-    const s = String(t).trim();
-    const ampm = s.match(/am|pm/i);
-    let [h,m] = s.replace(/am|pm/i,'').trim().split(':').map(Number);
-    if (isNaN(h) || isNaN(m)) return null;
-    if (ampm) {
-      const ap = ampm[0].toLowerCase();
-      if (ap === 'pm' && h < 12) h += 12;
-      if (ap === 'am' && h === 12) h = 0;
-    }
-    const d = new Date();
-    d.setHours(h,m,0,0);
-    return d;
-  }
-
-  // Create a doughnut chart on a canvas with given data
+  // Render a doughnut chart into the given canvas element with the provided data
+  // using Chart.js.  If the data array is empty, the canvas is hidden.
   function renderDonut(canvas, data) {
     const ctx = canvas.getContext('2d');
     // destroy previous chart if exists
@@ -141,15 +167,14 @@
       canvas._chart = null;
     }
     if (!data.length) {
-      // hide chart if no data
       canvas.style.display = 'none';
       return;
     }
     canvas.style.display = 'block';
     const labels = data.map(d => d[0]);
     const values = data.map(d => +d[1].toFixed(2));
-    const bg = labels.map((_, i) => `hsl(${(i*67)%360} 65% 60% / 0.9)`);
-    const border = labels.map((_, i) => `hsl(${(i*67)%360} 65% 35% / 1)`);
+    const bg = labels.map((_, i) => `hsl(${(i * 67) % 360} 65% 60% / 0.9)`);
+    const border = labels.map((_, i) => `hsl(${(i * 67) % 360} 65% 35% / 1)`);
     const dataset = {
       labels,
       datasets: [{
@@ -168,10 +193,10 @@
           legend: { position: 'right' },
           tooltip: {
             callbacks: {
-              label: function(ctx) {
-                const total = values.reduce((a,b) => a+b, 0) || 1;
+              label: function (ctx) {
+                const total = values.reduce((a, b) => a + b, 0) || 1;
                 const v = ctx.parsed;
-                const pct = ((v / total)*100).toFixed(1);
+                const pct = ((v / total) * 100).toFixed(1);
                 return `${ctx.label}: ${v.toFixed(2)} hrs (${pct}%)`;
               }
             }
@@ -181,40 +206,123 @@
     });
   }
 
-  // Build dashboard section into the page
+  // Global state to track whether the dashboard has been initialised
+  let dashboardInitialized = false;
+
+  // Populate the employee select list in the dashboard
+  function populateEmployees() {
+    const select = document.getElementById('employeeSelect');
+    if (!select) return;
+    while (select.firstChild) select.removeChild(select.firstChild);
+    const optDefault = document.createElement('option');
+    optDefault.value = '';
+    optDefault.textContent = '--Select--';
+    select.appendChild(optDefault);
+    const names = getEmployeeNames();
+    names.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  }
+
+  // Update the employee donut chart based on current selections
+  function updateEmployeeChart() {
+    const empSelect = document.getElementById('employeeSelect');
+    const empStart = document.getElementById('empStartDate');
+    const empEnd = document.getElementById('empEndDate');
+    const empCanvas = document.getElementById('employeeDonut');
+    if (!empSelect || !empCanvas) return;
+    const emp = empSelect.value || null;
+    const start = empStart && empStart.value ? empStart.value : null;
+    const end = empEnd && empEnd.value ? empEnd.value : null;
+    const data = aggregateForEmployee(emp, start, end);
+    renderDonut(empCanvas, data);
+  }
+
+  // Update the all employees donut chart based on current range selection
+  function updateAllChart() {
+    const rangeSelect = document.getElementById('allRangeSelect');
+    const allCanvas = document.getElementById('allDonut');
+    if (!rangeSelect || !allCanvas) return;
+    const range = rangeSelect.value;
+    const data = aggregateForAll(range);
+    renderDonut(allCanvas, data);
+  }
+
+  // Update the logs table from localStorage.  Creates rows for each entry in
+  // 'entryLogs', showing timestamp, latitude/longitude, and a link to Google
+  // Maps.  Called whenever entries are added or when the logs tracker is
+  // displayed.
+  function updateLogsTable() {
+    const table = document.getElementById('logsTable');
+    if (!table) return;
+    const logs = JSON.parse(localStorage.getItem('entryLogs') || '[]');
+    const body = table.querySelector('tbody');
+    while (body.firstChild) body.removeChild(body.firstChild);
+    logs.forEach(log => {
+      const row = document.createElement('tr');
+      const tdTime = document.createElement('td');
+      tdTime.textContent = new Date(log.date).toLocaleString();
+      tdTime.style.padding = '4px 8px';
+      const tdLoc = document.createElement('td');
+      tdLoc.textContent = `${log.lat.toFixed(5)}, ${log.lon.toFixed(5)}`;
+      tdLoc.style.padding = '4px 8px';
+      const tdLink = document.createElement('td');
+      const link = document.createElement('a');
+      link.href = `https://www.google.com/maps?q=${log.lat},${log.lon}`;
+      link.target = '_blank';
+      link.textContent = 'View';
+      tdLink.appendChild(link);
+      tdLink.style.padding = '4px 8px';
+      row.appendChild(tdTime);
+      row.appendChild(tdLoc);
+      row.appendChild(tdLink);
+      body.appendChild(row);
+    });
+  }
+
+  // Initialise the dashboard section.  Creates the necessary DOM elements
+  // (employee and all employees charts and logs table) and inserts them
+  // immediately after the reports section.  The dashboard and logs are hidden
+  // by default; toggling them is handled by other functions.
   function initDashboard() {
-    // Ensure Chart.js is loaded; rely on existing global Chart
+    if (dashboardInitialized) return;
+    dashboardInitialized = true;
+
+    // Ensure Chart.js is loaded before proceeding
     if (typeof Chart === 'undefined') return;
-    // Insert section only once
-    if (document.getElementById('employee-dashboard')) return;
+
     const reportsSection = document.querySelector('.reports-section');
     const parent = reportsSection ? reportsSection.parentNode : document.body;
 
-    // Create container
+    // Create wrapper for the entire dashboard section
     const wrapper = document.createElement('div');
     wrapper.id = 'dashboard-section';
     wrapper.style.marginTop = '2rem';
+    wrapper.style.display = 'none'; // hidden until toggled
 
     // Title
     const title = document.createElement('h2');
     title.textContent = 'Dashboard';
     wrapper.appendChild(title);
 
-    // Employee donut section
+    // ------------------ Employee chart section ------------------
     const empSection = document.createElement('div');
     empSection.id = 'employee-donut-section';
     empSection.style.marginTop = '1rem';
     const empTitle = document.createElement('h3');
     empTitle.textContent = 'Employee Task Group Distribution';
     empSection.appendChild(empTitle);
-    // employee select
+    // Employee select dropdown
     const empLabel = document.createElement('label');
     empLabel.textContent = 'Employee: ';
     empSection.appendChild(empLabel);
     const empSelect = document.createElement('select');
     empSelect.id = 'employeeSelect';
     empLabel.appendChild(empSelect);
-    // date inputs
+    // Start date input
     const startLabel = document.createElement('label');
     startLabel.textContent = ' Start Date: ';
     empSection.appendChild(startLabel);
@@ -222,6 +330,7 @@
     empStart.type = 'date';
     empStart.id = 'empStartDate';
     startLabel.appendChild(empStart);
+    // End date input
     const endLabel = document.createElement('label');
     endLabel.textContent = ' End Date: ';
     empSection.appendChild(endLabel);
@@ -229,44 +338,64 @@
     empEnd.type = 'date';
     empEnd.id = 'empEndDate';
     endLabel.appendChild(empEnd);
-    // canvas
+    // Canvas for the chart
     const empCanvas = document.createElement('canvas');
     empCanvas.id = 'employeeDonut';
     empCanvas.width = 400;
     empCanvas.height = 300;
     empSection.appendChild(empCanvas);
+    // Generate chart button
+    const empGenBtn = document.createElement('button');
+    empGenBtn.id = 'generateEmployeeChartBtn';
+    empGenBtn.textContent = 'Generate Chart';
+    empGenBtn.className = 'btn btn-secondary';
+    empSection.appendChild(empGenBtn);
     wrapper.appendChild(empSection);
 
-    // All employees donut section
+    // ------------------ All employees chart section ------------------
     const allSection = document.createElement('div');
     allSection.id = 'all-donut-section';
     allSection.style.marginTop = '1rem';
     const allTitle = document.createElement('h3');
     allTitle.textContent = 'All Employees Task Group Distribution';
     allSection.appendChild(allTitle);
+    // Range select
     const allLabel = document.createElement('label');
     allLabel.textContent = 'Range: ';
     allSection.appendChild(allLabel);
     const rangeSelect = document.createElement('select');
     rangeSelect.id = 'allRangeSelect';
-    ['daily','weekly','monthly'].forEach(val => {
+    const rangeOptions = [
+      { value: 'daily', text: 'Today' },
+      { value: 'weekly', text: 'Last 7 days' },
+      { value: 'monthly', text: 'Last 30 days' }
+    ];
+    rangeOptions.forEach(optData => {
       const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = val === 'daily' ? 'Today' : val === 'weekly' ? 'Last 7 days' : 'Last 30 days';
+      opt.value = optData.value;
+      opt.textContent = optData.text;
       rangeSelect.appendChild(opt);
     });
     allLabel.appendChild(rangeSelect);
+    // Canvas for all employees chart
     const allCanvas = document.createElement('canvas');
     allCanvas.id = 'allDonut';
     allCanvas.width = 400;
     allCanvas.height = 300;
     allSection.appendChild(allCanvas);
+    // Generate chart button
+    const allGenBtn = document.createElement('button');
+    allGenBtn.id = 'generateAllChartBtn';
+    allGenBtn.textContent = 'Generate Chart';
+    allGenBtn.className = 'btn btn-secondary';
+    allSection.appendChild(allGenBtn);
     wrapper.appendChild(allSection);
 
-    // Logs tracker section
+    // ------------------ Logs tracker section ------------------
     const logsSec = document.createElement('div');
     logsSec.id = 'logs-section';
     logsSec.style.marginTop = '1rem';
+    logsSec.style.display = 'none'; // hidden by default
     const logsTitle = document.createElement('h3');
     logsTitle.textContent = 'Logs Tracker';
     logsSec.appendChild(logsTitle);
@@ -276,7 +405,7 @@
     table.style.borderCollapse = 'collapse';
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    ['Timestamp','Location','Map'].forEach(text => {
+    ['Timestamp', 'Location', 'Map'].forEach(text => {
       const th = document.createElement('th');
       th.textContent = text;
       th.style.borderBottom = '1px solid #ccc';
@@ -290,136 +419,133 @@
     logsSec.appendChild(table);
     wrapper.appendChild(logsSec);
 
-    // Insert wrapper after reportsSection if available
+    // Insert the wrapper into the DOM after the reports section, if present
     if (reportsSection) {
       parent.insertBefore(wrapper, reportsSection.nextSibling);
     } else {
       document.body.appendChild(wrapper);
     }
 
-    // Populate employee select
-    function populateEmployees() {
-      const select = document.getElementById('employeeSelect');
-      // clear existing
-      while (select.firstChild) select.removeChild(select.firstChild);
-      const optDefault = document.createElement('option');
-      optDefault.value = '';
-      optDefault.textContent = '--Select--';
-      select.appendChild(optDefault);
-      const names = getEmployeeNames();
-      names.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        select.appendChild(opt);
-      });
+    // Populate employee list now and again when necessary
+    populateEmployees();
+
+    // Attach event listeners to the generate buttons
+    empGenBtn.addEventListener('click', updateEmployeeChart);
+    allGenBtn.addEventListener('click', updateAllChart);
+  }
+
+  // Toggle the visibility of the dashboard section.  If the dashboard has not
+  // yet been created, it is initialised on first toggle.  Otherwise, its
+  // display property is toggled between 'none' and 'block'.
+  function toggleDashboard() {
+    // If not initialised, create it first
+    if (!dashboardInitialized) {
+      initDashboard();
     }
-
-    // Update employee donut chart
-    function updateEmployeeChart() {
-      const emp = empSelect.value || null;
-      const start = empStart.value || null;
-      const end = empEnd.value || null;
-      const data = aggregateForEmployee(emp, start, end);
-      renderDonut(empCanvas, data);
+    const wrapper = document.getElementById('dashboard-section');
+    if (wrapper) {
+      wrapper.style.display = (wrapper.style.display === 'none' || wrapper.style.display === '') ? 'block' : 'none';
     }
+  }
 
-    // Update all employees donut chart
-    function updateAllChart() {
-      const range = rangeSelect.value;
-      const data = aggregateForAll(range);
-      renderDonut(allCanvas, data);
+  // Toggle the visibility of the logs section.  If the dashboard has not yet
+  // been created, initialise it first.  When showing the logs, refresh the
+  // table contents.
+  function toggleLogs() {
+    if (!dashboardInitialized) {
+      initDashboard();
     }
-
-    // Update logs table
-    function updateLogsTable() {
-      const logs = JSON.parse(localStorage.getItem('entryLogs') || '[]');
-      const body = table.querySelector('tbody');
-      while (body.firstChild) body.removeChild(body.firstChild);
-      logs.forEach(log => {
-        const row = document.createElement('tr');
-        const tdTime = document.createElement('td');
-        tdTime.textContent = new Date(log.date).toLocaleString();
-        tdTime.style.padding = '4px 8px';
-        const tdLoc = document.createElement('td');
-        tdLoc.textContent = `${log.lat.toFixed(5)}, ${log.lon.toFixed(5)}`;
-        tdLoc.style.padding = '4px 8px';
-        const tdLink = document.createElement('td');
-        const link = document.createElement('a');
-        link.href = `https://www.google.com/maps?q=${log.lat},${log.lon}`;
-        link.target = '_blank';
-        link.textContent = 'View';
-        tdLink.appendChild(link);
-        tdLink.style.padding = '4px 8px';
-        row.appendChild(tdTime);
-        row.appendChild(tdLoc);
-        row.appendChild(tdLink);
-        body.appendChild(row);
-      });
+    const logsSec = document.getElementById('logs-section');
+    if (logsSec) {
+      const currentlyHidden = logsSec.style.display === 'none' || logsSec.style.display === '';
+      logsSec.style.display = currentlyHidden ? 'block' : 'none';
+      if (currentlyHidden) {
+        updateLogsTable();
+      }
     }
+  }
 
-    // Event listeners
-    empSelect.addEventListener('change', updateEmployeeChart);
-    empStart.addEventListener('change', updateEmployeeChart);
-    empEnd.addEventListener('change', updateEmployeeChart);
-    rangeSelect.addEventListener('change', updateAllChart);
-
-    // Hook into Add Entry button to capture location logs
+  // Hook into Add Entry and Generate Report buttons to refresh employee list,
+  // update charts (if visible) and update logs.  Also record the user's
+  // geolocation when adding an entry.
+  function attachIntegrationHooks() {
+    // Add entry button: record location and update employees/charts/logs
     const addBtn = document.getElementById('addEntryBtn') || document.querySelector('button#addEntryBtn') || document.querySelector('button[onclick="addEntry()"]');
     if (addBtn) {
       addBtn.addEventListener('click', () => {
+        // capture geolocation
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition((pos) => {
             const logs = JSON.parse(localStorage.getItem('entryLogs') || '[]');
-            logs.push({date: new Date().toISOString(), lat: pos.coords.latitude, lon: pos.coords.longitude});
+            logs.push({ date: new Date().toISOString(), lat: pos.coords.latitude, lon: pos.coords.longitude });
             localStorage.setItem('entryLogs', JSON.stringify(logs));
-            updateLogsTable();
           });
         }
-        // Delay updating charts to allow underlying data to update
+        // After entry is added, refresh employee names and charts/logs if visible
         setTimeout(() => {
           populateEmployees();
-          updateEmployeeChart();
-          updateAllChart();
+          // Only update charts if dashboard is visible
+          const wrapper = document.getElementById('dashboard-section');
+          if (wrapper && wrapper.style.display !== 'none') {
+            updateEmployeeChart();
+            updateAllChart();
+          }
+          // Update logs table if logs section is visible
+          const logsSec = document.getElementById('logs-section');
+          if (logsSec && logsSec.style.display !== 'none') {
+            updateLogsTable();
+          }
         }, 0);
       });
     }
-
-    // Also update logs and charts when Generate Report button is clicked, in case entries changed
-    const genBtn = Array.from(document.querySelectorAll('button, input[type="button"]')).find(b => /generate report/i.test(b.textContent || b.value || ''));
+    // Generate report button: refresh employee list and charts and logs after a report
+    const genBtnCandidates = Array.from(document.querySelectorAll('button, input[type="button"]'));
+    const genBtn = genBtnCandidates.find(b => /generate report/i.test(b.textContent || b.value || ''));
     if (genBtn) {
       genBtn.addEventListener('click', () => {
         setTimeout(() => {
           populateEmployees();
-          updateEmployeeChart();
-          updateAllChart();
-          updateLogsTable();
+          const wrapper = document.getElementById('dashboard-section');
+          if (wrapper && wrapper.style.display !== 'none') {
+            updateEmployeeChart();
+            updateAllChart();
+          }
+          const logsSec = document.getElementById('logs-section');
+          if (logsSec && logsSec.style.display !== 'none') {
+            updateLogsTable();
+          }
         }, 0);
       });
     }
-
-    // Initial population
-    populateEmployees();
-    updateEmployeeChart();
-    updateAllChart();
-    updateLogsTable();
   }
 
-  // Wait for DOM and Chart library to initialize
+  // Attach event listeners to the Dashboard and Logs Tracker buttons once the
+  // DOM is ready and Chart.js is available.  If Chart.js has not yet loaded,
+  // we poll until it becomes available.
   function start() {
+    function attach() {
+      // Set up integration hooks on Add Entry/Generate Report
+      attachIntegrationHooks();
+      // Attach toggles to new buttons
+      const dashBtn = document.getElementById('dashboardBtn');
+      if (dashBtn) dashBtn.addEventListener('click', toggleDashboard);
+      const logsBtn = document.getElementById('logsTrackerBtn');
+      if (logsBtn) logsBtn.addEventListener('click', toggleLogs);
+    }
     if (typeof Chart !== 'undefined') {
-      initDashboard();
+      attach();
     } else {
-      // Wait until Chart script loads; check every 100ms
+      // Poll for Chart.js availability
       const intId = setInterval(() => {
         if (typeof Chart !== 'undefined') {
           clearInterval(intId);
-          initDashboard();
+          attach();
         }
       }, 100);
     }
   }
 
+  // Kick off when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start);
   } else {
