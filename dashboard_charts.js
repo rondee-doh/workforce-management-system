@@ -58,11 +58,34 @@
   function getEmployeeNames() {
     const entries = getStoredEntries();
     const names = [];
+    // Collect names from stored entries (if any)
     for (const e of entries) {
       const name = e.employeeName || e.EmployeeName || e.employee || e.Employee;
       if (name && !names.includes(name)) {
         names.push(name);
       }
+    }
+    // Also collect names from the main form's employee select dropdown
+    try {
+      // Attempt several selectors to find the employee select element
+      const formSelect = document.querySelector(
+        'select[id="employeeName"], select[name="employeeName"], select[id*="employeeName"]'
+      );
+      if (formSelect) {
+        for (const opt of formSelect.options) {
+          const text = (opt.textContent || '').trim();
+          // Skip placeholder options like "Select Employee" or empty values
+          if (
+            text &&
+            text.toLowerCase().indexOf('select') === -1 &&
+            !names.includes(text)
+          ) {
+            names.push(text);
+          }
+        }
+      }
+    } catch (err) {
+      // Fail silently if DOM access errors occur
     }
     return names.sort();
   }
