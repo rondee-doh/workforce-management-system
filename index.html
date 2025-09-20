@@ -371,8 +371,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <!-- Include Task Group Pie Chart code -->
     <script src="pie_chart.js"></script>
-    <!-- Include Dashboard donut charts and logs tracker -->
-    <script src="dashboard_charts.js"></script>
+    <!-- Dashboard and logs tracker functionality removed -->
 </head>
 <body>
     <div class="container">
@@ -496,9 +495,7 @@
                 <!-- New Save Data button to persist entries across sessions -->
                 <button id="saveDataBtn" type="button" class="btn" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);" onclick="saveData()">💾 Save Data</button>
                 <button id="clearDataBtn" type="button" class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
-                <!-- Added Logs Tracker and Dashboard buttons for toggling additional features -->
-                <button id="logsTrackerBtn" type="button" class="btn btn-secondary">Logs Tracker</button>
-                <button id="dashboardBtn" type="button" class="btn btn-secondary">Dashboard</button>
+                <!-- Dashboard and logs tracker buttons removed -->
             </div>
 
             <!-- Current Entries Display -->
@@ -1546,6 +1543,64 @@
                 return chartDiv;
             }
 
+            // Helper to create a pie chart section using Chart.js
+            function createPieChart(title, labels, values) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'custom-pie-chart';
+                // Title
+                const header = document.createElement('h4');
+                header.textContent = title;
+                chartDiv.appendChild(header);
+                // Canvas
+                const canvas = document.createElement('canvas');
+                const canvasId = 'pie-' + Math.random().toString(36).substr(2, 9);
+                canvas.id = canvasId;
+                chartDiv.appendChild(canvas);
+                // Generate colors for each slice
+                const colors = labels.map((_, i) => {
+                    const hue = (i * 360 / labels.length) % 360;
+                    return `hsl(${hue}, 70%, 60%)`;
+                });
+                // Create Chart.js pie chart
+                // Ensure Chart.js is available
+                if (typeof Chart !== 'undefined') {
+                    new Chart(canvas.getContext('2d'), {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values.map(v => parseFloat(v.toFixed(2))),
+                                backgroundColor: colors,
+                                borderColor: colors.map(color => color.replace('60%', '45%')),
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'right'
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const value = context.parsed;
+                                            const percentage = total > 0 ? (value / total * 100).toFixed(1) : 0;
+                                            return `${context.label}: ${value.toFixed(2)} hrs (${percentage}%)`;
+                                        }
+                                    }
+                                },
+                                title: {
+                                    display: false
+                                }
+                            }
+                        }
+                    });
+                }
+                return chartDiv;
+            }
+
             // Prepare values for charts
             const totalHoursValues = employees.map(emp => emp.totalHours);
             const avgDailyHoursValues = employees.map(emp => emp.averageDailyHours);
@@ -1578,8 +1633,9 @@
             container.appendChild(hoursChart);
 
             // Build average hours charts
-            const dailyHoursChart = createBarChart('Average Daily Hours by Employee', avgDailyHoursValues, maxAvgDailyHours, 'hours');
-            container.appendChild(dailyHoursChart);
+            // For Average Daily Hours by Employee, use a pie chart instead of bar chart
+            const dailyHoursPieChart = createPieChart('Average Daily Hours by Employee', employees.map(emp => emp.name), avgDailyHoursValues);
+            container.appendChild(dailyHoursPieChart);
             const weeklyHoursChart = createBarChart('Average Weekly Hours by Employee', avgWeeklyHoursValues, maxAvgWeeklyHours, 'hours');
             container.appendChild(weeklyHoursChart);
             const monthlyHoursChart = createBarChart('Average Monthly Hours by Employee', avgMonthlyHoursValues, maxAvgMonthlyHours, 'hours');
