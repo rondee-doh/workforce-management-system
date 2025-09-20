@@ -277,6 +277,54 @@
     });
   }
 
+  // Render a pie chart (full circle) using Chart.js
+  function renderPie(canvas, data) {
+    const ctx = canvas.getContext('2d');
+    // destroy previous chart if exists
+    if (canvas._chart) {
+      canvas._chart.destroy();
+      canvas._chart = null;
+    }
+    if (!data.length) {
+      canvas.style.display = 'none';
+      return;
+    }
+    canvas.style.display = 'block';
+    const labels = data.map(d => d[0]);
+    const values = data.map(d => +d[1].toFixed(2));
+    const bg = labels.map((_, i) => `hsl(${(i * 67) % 360} 65% 60% / 0.9)`);
+    const border = labels.map((_, i) => `hsl(${(i * 67) % 360} 65% 35% / 1)`);
+    const dataset = {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: bg,
+        borderColor: border,
+        borderWidth: 1
+      }]
+    };
+    canvas._chart = new Chart(ctx, {
+      type: 'pie',
+      data: dataset,
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'right' },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                const total = values.reduce((a, b) => a + b, 0) || 1;
+                const v = ctx.parsed;
+                const pct = ((v / total) * 100).toFixed(1);
+                return `${ctx.label}: ${v.toFixed(2)} hrs (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
   // Global state to track whether the dashboard has been initialised
   let dashboardInitialized = false;
 
@@ -309,7 +357,8 @@
     const start = empStart && empStart.value ? empStart.value : null;
     const end = empEnd && empEnd.value ? empEnd.value : null;
     const data = aggregateForEmployee(emp, start, end);
-    renderDonut(empCanvas, data);
+    // Render as pie chart instead of doughnut for employee distribution
+    renderPie(empCanvas, data);
   }
 
   // Update the all employees donut chart based on current range selection
