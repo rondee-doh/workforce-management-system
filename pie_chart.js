@@ -146,17 +146,51 @@
       emptyP.style.display = 'none';
       const labels = data.map(d => d[0]);
       const values = data.map(d => +d[1].toFixed(2));
-      const bg = labels.map((_, i) => `hsl(${(i*57)%360} 70% 60% / 0.9)`);
-      const border = labels.map((_, i) => `hsl(${(i*57)%360} 70% 35% / 1)`);
+      // Define a professional color palette (cycling if there are more slices than colors)
+      const basePalette = [
+        '#6366F1', // indigo
+        '#7C3AED', // purple
+        '#A855F7', // violet
+        '#C084FC', // mauve
+        '#E879F9', // pink
+        '#818CF8', // lavender
+        '#5B21B6', // deep purple
+        '#581C87', // plum
+        '#9333EA', // orchid
+        '#6EE7B7'  // mint
+      ];
+      const bg = labels.map((_, i) => basePalette[i % basePalette.length]);
+      // Use a slightly darker border color for each slice
+      const border = bg.map(hex => {
+        // Simple shade function: darken the color by reducing each RGB channel
+        function shade(col, amt) {
+          const num = parseInt(col.slice(1), 16);
+          let r = (num >> 16) + amt;
+          let g = ((num >> 8) & 0x00FF) + amt;
+          let b = (num & 0x0000FF) + amt;
+          r = Math.max(Math.min(255, r), 0);
+          g = Math.max(Math.min(255, g), 0);
+          b = Math.max(Math.min(255, b), 0);
+          return '#' + (r << 16 | g << 8 | b).toString(16).padStart(6, '0');
+        }
+        return shade(hex, -30);
+      });
       const ds = {
         labels,
         datasets: [{
           data: values,
           backgroundColor: bg,
           borderColor: border,
-          borderWidth: 1
+          borderWidth: 2
         }]
       };
+      // Set some sensible global defaults for Chart.js once loaded
+      if (typeof Chart !== 'undefined') {
+        Chart.defaults.font.family = 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+        Chart.defaults.font.size = 14;
+        Chart.defaults.color = '#374151';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+      }
       if (pieChart) pieChart.destroy();
       pieChart = new Chart(canvas.getContext('2d'), {
         type: 'pie',
@@ -164,7 +198,12 @@
         options: {
           responsive: true,
           plugins: {
-            legend: { position: 'right' },
+            legend: {
+              position: 'right',
+              labels: {
+                padding: 12
+              }
+            },
             tooltip: {
               callbacks: {
                 label: function(ctx) {
@@ -174,6 +213,14 @@
                   return `${ctx.label}: ${v.toFixed(2)} hrs (${pct}%)`;
                 }
               }
+            }
+          },
+          layout: {
+            padding: {
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
             }
           }
         }
