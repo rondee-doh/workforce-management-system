@@ -350,9 +350,12 @@
         }
 
         .bar {
-            position: relative;
-            height: 22px;
-            background-color: rgba(99, 102, 241, 0.8);
+                   position: relative;
+            height: 20px;
+            /* Use a professional gradient for bars */
+            background: linear-gradient(90deg, #6366F1 0%, #7C3AED 100%);
+            border-radius: 4px;
+flex-grow: 1;
             border-radius: 4px;
             flex-grow: 1;
         }
@@ -370,7 +373,13 @@
     <!-- Include Chart.js for the dashboard visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <!-- Include Task Group Pie Chart code -->
-    <script src="pie_chart.js"></script>
+<script src="./pie_chart.js"></script>
+377
+378
+379
+380
+381
+<script src="./pie_chart.js"></script>
     <!-- Dashboard and logs tracker functionality removed -->
 </head>
 <body>
